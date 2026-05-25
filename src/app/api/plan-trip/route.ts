@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { lookupCityCode, searchFlights, searchHotels } from "@/lib/amadeus";
 import { getWeather } from "@/lib/openweather";
 import { generateTripPlan } from "@/lib/claude";
 import type { Profile, TripRequest } from "@/lib/types";
@@ -22,31 +21,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing destination or dates." }, { status: 400 });
     }
 
-    const [destLookup, weather] = await Promise.all([
-      lookupCityCode(trip.destination).catch(() => null),
-      getWeather(trip.destination).catch(() => null),
-    ]);
-
-    const destCode = destLookup?.iataCode;
-
-    const [flights, hotels] = await Promise.all([
-      destCode
-        ? searchFlights({
-            origin: profile.homeAirport,
-            destination: destCode,
-            departureDate: trip.startDate,
-            returnDate: trip.endDate,
-            adults: trip.travelers,
-          }).catch(() => [])
-        : Promise.resolve([]),
-      destCode ? searchHotels(destCode).catch(() => []) : Promise.resolve([]),
-    ]);
+    const weather = await getWeather(trip.destination).catch(() => null);
 
     const plan = await generateTripPlan({
       profile,
       request: trip,
-      flights,
-      hotels,
       weather,
     });
 

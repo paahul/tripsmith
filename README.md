@@ -6,10 +6,11 @@ It does **not** book anything. It hands you deep links to Google Flights / Booki
 
 ## Stack
 - Next.js 16 (App Router) + TypeScript + Tailwind v4
-- Anthropic Claude Sonnet 4.6 for reasoning
-- Amadeus Self-Service API for flight + hotel pricing
+- Anthropic Claude Sonnet 4.6 for reasoning + estimated prices
 - OpenWeather for forecast → packing list
 - localStorage for the user profile (no DB, no auth in v1)
+
+Flight + hotel links go to Google Flights / Booking.com / Airbnb search with your dates pre-filled — click to see live prices.
 
 ## Setup
 
@@ -18,8 +19,7 @@ It does **not** book anything. It hands you deep links to Google Flights / Booki
    cp .env.local.example .env.local
    ```
 2. Get keys:
-   - **Anthropic**: https://console.anthropic.com (personal account)
-   - **Amadeus**: https://developers.amadeus.com (free Self-Service tier, instant)
+   - **Anthropic**: https://console.anthropic.com (personal account → Plans → upgrade to Build → buy credits)
    - **OpenWeather**: https://openweathermap.org/api (free tier)
 3. Install + run:
    ```
@@ -35,5 +35,4 @@ It does **not** book anything. It hands you deep links to Google Flights / Booki
 
 ## Costs
 - Anthropic: ~$0.01–0.05 per trip plan (Sonnet 4.6, prompt caching enabled)
-- Amadeus test env: free
 - OpenWeather: free up to 1,000 calls/day
