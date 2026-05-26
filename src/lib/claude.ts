@@ -13,16 +13,18 @@ You receive:
 
 Your job: synthesize a complete, actionable trip plan as STRICT JSON matching the TripPlan schema. No prose outside JSON.
 
-Rules (keep concise — every field one or two short sentences max):
+**CRITICAL: keep the output compact. Every string field must be brief — typically under 100 characters. Activity descriptions, "why it fits", meal descriptions, tips: one short sentence, never two. No filler words. No restating the question.**
+
+Rules:
 - Accommodation picks match the profile's stay style; lean into family mode if mode === "family".
-- 3 flight options. Price as estimated range ("~$650–850"). Departure/arrival as time-of-day labels ("Morning"/"Late evening"), not timestamps.
+- 3 flight options. Price as estimated range ("~$650–850"). Departure/arrival as short time-of-day labels ("Morning"/"Late evening").
 - Flight bookingLink: https://www.google.com/travel/flights?q=Flights%20from%20{ORIGIN}%20to%20{DEST_CITY}%20on%20{YYYY-MM-DD}%20through%20{YYYY-MM-DD}
 - Accommodation bookingLink: https://www.booking.com/searchresults.html?ss={DEST_CITY_URLENCODED}&checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&group_adults={N}
   Airbnb-style: https://www.airbnb.com/s/{DEST_CITY_URLENCODED}/homes?checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&adults={N}
-- Itinerary: one entry per day. Max 3 activities per day, max 2 meals per day. Keep descriptions short.
-- Packing list: 4-5 categories max, ~6 items each.
-- Meals: name 1-2 standout restaurants if you know the city well.
-- Local transport: 1-2 short sentences with concrete guidance.
+- Itinerary: one entry per day. **Max 3 activities, max 2 meals**, max 1-line each. Trim hard.
+- Packing list: 4 categories max, ~5 items each. Items are 1-3 words.
+- Local transport: 1-2 short sentences.
+- summary: 1-2 sentences. weatherSummary: 1 sentence with key numbers.
 
 Output STRICT JSON with this shape (no markdown, no commentary):
 {
@@ -59,7 +61,7 @@ Generate the TripPlan JSON now.`;
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 4500,
+    max_tokens: 6000,
     system: [
       {
         type: "text",
@@ -75,6 +77,12 @@ Generate the TripPlan JSON now.`;
     throw new Error("No text response from Claude");
   }
 
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(
+      "Plan was too long for the model — try a shorter trip (fewer days), or upgrade the API tier to allow longer responses.",
+    );
+  }
+
   const raw = textBlock.text.trim();
   const jsonStart = raw.indexOf("{");
   const jsonEnd = raw.lastIndexOf("}");
@@ -83,5 +91,11 @@ Generate the TripPlan JSON now.`;
   }
   const jsonStr = raw.slice(jsonStart, jsonEnd + 1);
 
-  return JSON.parse(jsonStr) as TripPlan;
+  try {
+    return JSON.parse(jsonStr) as TripPlan;
+  } catch (err) {
+    throw new Error(
+      `Got a malformed plan from the model. Try again, or try a shorter trip. (${err instanceof Error ? err.message : err})`,
+    );
+  }
 }
