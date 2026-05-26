@@ -1,18 +1,25 @@
 import { randomBytes } from "crypto";
-import { kv } from "@vercel/kv";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { TripPlan } from "./types";
 
-// Trips expire 90 days after last write. Long enough to share, short enough
-// to keep storage bounded.
-const TTL_SECONDS = 60 * 60 * 24 * 90;
-const PREFIX = "trip:";
-
-// In-memory fallback for local dev when Vercel KV env vars aren't set.
+// In-memory fallback for local dev when Supabase env vars aren't set.
 // Survives within a single Node process; dies on reload — fine for dev.
 const memoryStore = new Map<string, TripPlan>();
 
-function hasKv(): boolean {
-  return !!process.env.KV_REST_API_URL && !!process.env.KV_REST_API_TOKEN;
+let cachedClient: SupabaseClient | null = null;
+let cachedClientResolved = false;
+
+function getClient(): SupabaseClient | null {
+  if (cachedClientResolved) return cachedClient;
+  cachedClientResolved = true;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    cachedClient = null;
+    return null;
+  }
+  cachedClient = createClient(url, key, { auth: { persistSession: false } });
+  return cachedClient;
 }
 
 export function newTripId(): string {
@@ -22,8 +29,20 @@ export function newTripId(): string {
 
 export async function saveTripPlan(plan: TripPlan, id?: string): Promise<string> {
   const tripId = id ?? newTripId();
-  if (hasKv()) {
-    await kv.set(PREFIX + tripId, plan, { ex: TTL_SECONDS });
+  const client = getClient();
+  if (client) {
+    const { error } = await client.from("trips").upsert(
+      {
+        id: tripId,
+        plan,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    );
+    if (error) {
+      console.error("supabase trips upsert error:", error);
+      throw new Error(`Failed to save trip: ${error.message}`);
+    }
   } else {
     memoryStore.set(tripId, plan);
   }
@@ -31,9 +50,18 @@ export async function saveTripPlan(plan: TripPlan, id?: string): Promise<string>
 }
 
 export async function loadTripPlan(id: string): Promise<TripPlan | null> {
-  if (hasKv()) {
-    const plan = await kv.get<TripPlan>(PREFIX + id);
-    return plan ?? null;
+  const client = getClient();
+  if (client) {
+    const { data, error } = await client
+      .from("trips")
+      .select("plan")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) {
+      console.error("supabase trips select error:", error);
+      return null;
+    }
+    return (data?.plan as TripPlan | undefined) ?? null;
   }
   return memoryStore.get(id) ?? null;
 }
