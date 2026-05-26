@@ -89,6 +89,15 @@ export default async function Home() {
           <p className="mt-12 text-xs italic text-muted">
             tripsmith doesn&apos;t book anything. It hands you deep links so you click and confirm.
           </p>
+
+          <p className="mt-10 text-sm">
+            <Link
+              href="/trip/demo"
+              className="text-muted underline-offset-4 hover:text-terracotta hover:underline"
+            >
+              Or skip the setup — see an example plan →
+            </Link>
+          </p>
         </div>
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2">

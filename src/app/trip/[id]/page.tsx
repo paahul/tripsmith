@@ -20,6 +20,9 @@ const ANCHORS = [
 
 export default function TripPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  // The "demo" trip is the showcase plan linked from the homepage. Lock down
+  // refine/email/undo so a recruiter clicking through can't mutate it.
+  const isDemo = id === "demo";
   const [plan, setPlan] = useState<TripPlanWithId | null>(null);
   const [previousPlan, setPreviousPlan] = useState<TripPlanWithId | null>(null);
   const [missing, setMissing] = useState(false);
@@ -237,31 +240,44 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
             {plan.summary}
           </p>
 
+          {isDemo && (
+            <div className="mb-6 rounded border border-terracotta/40 bg-terracotta-soft/40 px-4 py-2 text-sm text-terracotta-deep">
+              You&rsquo;re viewing the example plan.{" "}
+              <Link href="/plan" className="font-medium underline underline-offset-4">
+                Plan your own →
+              </Link>
+            </div>
+          )}
+
           {/* Inline secondary action row */}
           <div className="mb-10 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="text-ink hover:text-terracotta"
-            >
-              {copied ? "✓ Link copied" : "Copy share link"}
-            </button>
-            <span className="text-line-strong">·</span>
-            {sent ? (
-              <span className="text-ink-2">
-                ✓ Emailed to <span className="font-mono">{sent}</span>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={handleEmail}
-                disabled={sending}
-                className="text-ink hover:text-terracotta disabled:opacity-50"
-              >
-                {sending ? "Sending…" : "Email this plan"}
-              </button>
+            {!isDemo && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="text-ink hover:text-terracotta"
+                >
+                  {copied ? "✓ Link copied" : "Copy share link"}
+                </button>
+                <span className="text-line-strong">·</span>
+                {sent ? (
+                  <span className="text-ink-2">
+                    ✓ Emailed to <span className="font-mono">{sent}</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleEmail}
+                    disabled={sending}
+                    className="text-ink hover:text-terracotta disabled:opacity-50"
+                  >
+                    {sending ? "Sending…" : "Email this plan"}
+                  </button>
+                )}
+                <span className="text-line-strong">·</span>
+              </>
             )}
-            <span className="text-line-strong">·</span>
             <Link href="/plan" className="text-muted hover:text-terracotta">
               Plan another
             </Link>
@@ -377,15 +393,17 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
         </Block>
       </div>
 
-      <RefineBar
-        tweak={tweak}
-        setTweak={setTweak}
-        refining={refining}
-        refineError={refineError}
-        onSubmit={handleRefine}
-        canUndo={!!previousPlan && !refining}
-        onUndo={handleUndo}
-      />
+      {!isDemo && (
+        <RefineBar
+          tweak={tweak}
+          setTweak={setTweak}
+          refining={refining}
+          refineError={refineError}
+          onSubmit={handleRefine}
+          canUndo={!!previousPlan && !refining}
+          onUndo={handleUndo}
+        />
+      )}
     </main>
   );
 }
