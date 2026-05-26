@@ -9,15 +9,17 @@ import { hasProfile, loadProfile } from "@/lib/profile";
 import { MAX_TRIP_DAYS, tripLengthDays, type TripRequest } from "@/lib/types";
 import { COVER_PHOTO_URL } from "@/lib/travelImages";
 
-const LOADING_MESSAGES = [
-  "Looking up flights…",
-  "Picking restaurants you'd like…",
-  "Choosing stays that match your tier…",
-  "Checking the weather forecast…",
-  "Building your day-by-day…",
-  "Pulling a hero shot…",
-  "Estimating the budget…",
+const LOADING_STEPS = [
+  "Reading your profile",
+  "Choosing stays that match your tier",
+  "Drafting your day-by-day",
+  "Picking restaurants you'll like",
+  "Looking up flights",
+  "Pulling a hero shot",
+  "Saving your trip",
 ];
+
+const STEP_DURATION_MS = 4500;
 
 function isoDate(d: Date | undefined): string {
   if (!d) return "";
@@ -60,8 +62,10 @@ export default function PlanPage() {
     if (loading) {
       setLoadingIndex(0);
       loadingTimerRef.current = setInterval(() => {
-        setLoadingIndex((i) => (i + 1) % LOADING_MESSAGES.length);
-      }, 4500);
+        // Stay on the last step instead of cycling, so the checklist doesn't
+        // "uncheck" itself if the API runs longer than the estimated total.
+        setLoadingIndex((i) => Math.min(i + 1, LOADING_STEPS.length - 1));
+      }, STEP_DURATION_MS);
     } else if (loadingTimerRef.current) {
       clearInterval(loadingTimerRef.current);
       loadingTimerRef.current = null;
@@ -118,18 +122,62 @@ export default function PlanPage() {
 
   if (loading) {
     return (
-      <main className="flex flex-1 items-center justify-center px-6 py-24">
-        <div className="text-center">
-          <div className="mb-6 inline-flex items-center gap-2">
-            <span className="block h-2 w-2 animate-pulse rounded-full bg-terracotta" />
-            <span className="block h-2 w-2 animate-pulse rounded-full bg-terracotta [animation-delay:200ms]" />
-            <span className="block h-2 w-2 animate-pulse rounded-full bg-terracotta [animation-delay:400ms]" />
-          </div>
-          <p className="font-serif text-3xl font-light italic text-ink">
-            {LOADING_MESSAGES[loadingIndex]}
+      <main className="flex flex-1 items-center justify-center px-6 py-16">
+        <div className="w-full max-w-md">
+          <p className="mb-2 text-xs uppercase tracking-[0.22em] text-terracotta">
+            Planning
           </p>
-          <p className="mt-3 text-sm text-muted">
-            This usually takes about 25–35 seconds.
+          <h1 className="mb-8 font-serif text-4xl font-light text-ink">
+            Building your trip…
+          </h1>
+          <ul className="space-y-3">
+            {LOADING_STEPS.map((step, i) => {
+              const state =
+                i < loadingIndex ? "done" : i === loadingIndex ? "active" : "pending";
+              return (
+                <li key={step} className="flex items-center gap-4">
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      state === "done"
+                        ? "border-moss bg-moss text-cream"
+                        : state === "active"
+                          ? "border-terracotta bg-terracotta text-cream animate-pulse"
+                          : "border-line bg-paper"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {state === "done" && (
+                      <svg
+                        viewBox="0 0 12 12"
+                        className="h-3 w-3"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M2.5 6.5 L5 9 L9.5 3.5" />
+                      </svg>
+                    )}
+                  </span>
+                  <span
+                    className={`font-serif text-lg ${
+                      state === "done"
+                        ? "text-muted line-through decoration-muted/40"
+                        : state === "active"
+                          ? "text-ink"
+                          : "text-muted"
+                    }`}
+                  >
+                    {step}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-8 text-xs italic text-muted">
+            Usually 25–35 seconds. tripsmith is asking Claude to draft a plan
+            tuned to your profile.
           </p>
         </div>
       </main>

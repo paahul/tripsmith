@@ -19,8 +19,25 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "tripsmith",
-  description: "Your personal travel planner.",
+  title: {
+    default: "tripsmith — a personal travel planner",
+    template: "%s · tripsmith",
+  },
+  description:
+    "Tell it how you travel. Get a profile-tuned itinerary — flights, stays, day-by-day, packing — in under a minute.",
+  openGraph: {
+    title: "tripsmith — a personal travel planner",
+    description:
+      "Tell it how you travel. Get a profile-tuned itinerary — flights, stays, day-by-day, packing — in under a minute.",
+    siteName: "tripsmith",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "tripsmith — a personal travel planner",
+    description:
+      "Tell it how you travel. Get a profile-tuned itinerary in under a minute.",
+  },
 };
 
 export const viewport: Viewport = {
