@@ -7,7 +7,7 @@ export default function Home() {
     TRAVEL_PHOTOS.find((p) => p.credit === "Dolomites"),
     TRAVEL_PHOTOS.find((p) => p.credit === "Cinque Terre"),
     TRAVEL_PHOTOS.find((p) => p.credit === "Tokyo"),
-    TRAVEL_PHOTOS.find((p) => p.credit === "Marrakech"),
+    TRAVEL_PHOTOS.find((p) => p.credit === "Chefchaouen"),
   ];
 
   return (

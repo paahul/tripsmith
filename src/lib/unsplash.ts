@@ -11,7 +11,7 @@ export type HeroImage = {
 const KEYWORD_MAP: Array<[RegExp, string]> = [
   [/tokyo|japan|kyoto|osaka|seoul|asia/i, "1480796927426-f609979314bd"],
   [/santorini|greek|greece|mykonos|athens/i, "1533105079780-92b9be482077"],
-  [/marrakech|morocco|fez|casablanca|sahara/i, "1539020140153-e479b8c61bf5"],
+  [/marrakech|morocco|fez|casablanca|chefchaouen|sahara/i, "1569383746724-6f1b882b8f46"],
   [/cinque|italy|italian|rome|florence|amalfi|mediterranean|coast|portugal|lisbon|spain|barcelona/i, "1530841377377-3ff06c0ca713"],
   [/dolomite|alps|swiss|switzerland|mountain|hike|lake|patagonia|norway|iceland/i, "1506905925346-21bda4d32df4"],
   [/germany|bavaria|black forest|forest|autumn|prague|vienna|austria/i, "1497436072909-60f360e1d4b1"],

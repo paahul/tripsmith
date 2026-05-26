@@ -24,10 +24,10 @@ export const TRAVEL_PHOTOS: TravelPhoto[] = [
     url: U("1480796927426-f609979314bd", 900),
   },
   {
-    id: "1539020140153-e479b8c61bf5",
-    alt: "Marrakech market spices",
-    credit: "Marrakech",
-    url: U("1539020140153-e479b8c61bf5", 900),
+    id: "1569383746724-6f1b882b8f46",
+    alt: "Chefchaouen blue street",
+    credit: "Chefchaouen",
+    url: U("1569383746724-6f1b882b8f46", 900),
   },
   {
     id: "1506905925346-21bda4d32df4",
