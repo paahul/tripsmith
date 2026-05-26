@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { TRAVEL_PHOTOS } from "@/lib/travelImages";
+import { getSupabaseServer } from "@/lib/supabase/server";
 
-export default function Home() {
-  // Four-up collage from the curated set. Stable across renders.
+export default async function Home() {
   const photos = [
     TRAVEL_PHOTOS.find((p) => p.credit === "Dolomites"),
     TRAVEL_PHOTOS.find((p) => p.credit === "Cinque Terre"),
@@ -10,9 +10,33 @@ export default function Home() {
     TRAVEL_PHOTOS.find((p) => p.credit === "Chefchaouen"),
   ];
 
+  let signedInEmail: string | null = null;
+  try {
+    const supabase = await getSupabaseServer();
+    const { data } = await supabase.auth.getUser();
+    signedInEmail = data.user?.email ?? null;
+  } catch {
+    /* Supabase not configured — render anonymous */
+  }
+
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
-      <div className="grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
+    <main className="flex flex-1 flex-col px-6 py-6">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-end gap-4 text-sm">
+        {signedInEmail ? (
+          <>
+            <Link href="/trips" className="text-ink hover:text-terracotta">
+              My trips
+            </Link>
+            <span className="text-muted">·</span>
+            <span className="font-mono text-xs text-muted">{signedInEmail}</span>
+          </>
+        ) : (
+          <Link href="/signin" className="text-ink hover:text-terracotta">
+            Sign in
+          </Link>
+        )}
+      </div>
+      <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <p className="mb-3 text-xs uppercase tracking-[0.22em] text-terracotta">
             A personal travel planner

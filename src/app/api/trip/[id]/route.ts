@@ -31,6 +31,6 @@ export async function PUT(
   if (!plan?.destination) {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
-  await saveTripPlan(plan, id);
+  await saveTripPlan(plan, { id });
   return NextResponse.json({ ok: true, id });
 }

@@ -3,6 +3,7 @@ import { getWeather } from "@/lib/openweather";
 import { generateTripPlan } from "@/lib/claude";
 import { getHeroImage } from "@/lib/unsplash";
 import { saveTripPlan } from "@/lib/tripStore";
+import { getSupabaseServer } from "@/lib/supabase/server";
 import { MAX_TRIP_DAYS, tripLengthDays, type Profile, type TripRequest } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -51,7 +52,16 @@ export async function POST(req: Request) {
     });
 
     const fullPlan = { ...plan, heroImage };
-    const id = await saveTripPlan(fullPlan);
+    // Attach the trip to the signed-in user when one exists.
+    let userId: string | undefined;
+    try {
+      const supabase = await getSupabaseServer();
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id;
+    } catch {
+      /* anonymous plan — fine */
+    }
+    const id = await saveTripPlan(fullPlan, { userId });
     return NextResponse.json({ ...fullPlan, id });
   } catch (err) {
     console.error("plan-trip error:", err);

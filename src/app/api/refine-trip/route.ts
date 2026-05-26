@@ -31,7 +31,8 @@ export async function POST(req: Request) {
     const updated = await refineTripPlan({ currentPlan, tweak });
     // Preserve the hero image — claude doesn't return it on refine.
     const withHero = { ...updated, heroImage: currentPlan.heroImage };
-    const savedId = await saveTripPlan(withHero, id);
+    // Don't pass userId on refine — keep existing ownership intact.
+    const savedId = await saveTripPlan(withHero, { id });
     return NextResponse.json({ ...withHero, id: savedId });
   } catch (err) {
     console.error("refine-trip error:", err);

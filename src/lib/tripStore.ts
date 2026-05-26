@@ -3,7 +3,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { TripPlan } from "./types";
 
 // In-memory fallback for local dev when Supabase env vars aren't set.
-// Survives within a single Node process; dies on reload — fine for dev.
 const memoryStore = new Map<string, TripPlan>();
 
 let cachedClient: SupabaseClient | null = null;
@@ -23,22 +22,27 @@ function getClient(): SupabaseClient | null {
 }
 
 export function newTripId(): string {
-  // ~11 chars, URL-safe.
   return randomBytes(8).toString("base64url");
 }
 
-export async function saveTripPlan(plan: TripPlan, id?: string): Promise<string> {
-  const tripId = id ?? newTripId();
+export async function saveTripPlan(
+  plan: TripPlan,
+  options: { id?: string; userId?: string } = {},
+): Promise<string> {
+  const tripId = options.id ?? newTripId();
   const client = getClient();
   if (client) {
-    const { error } = await client.from("trips").upsert(
-      {
-        id: tripId,
-        plan,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" },
-    );
+    const row: Record<string, unknown> = {
+      id: tripId,
+      plan,
+      updated_at: new Date().toISOString(),
+    };
+    // Only set user_id when explicitly provided. Refines pass undefined so
+    // ownership stays as-is (don't overwrite to null on refine).
+    if (options.userId !== undefined) {
+      row.user_id = options.userId;
+    }
+    const { error } = await client.from("trips").upsert(row, { onConflict: "id" });
     if (error) {
       console.error("supabase trips upsert error:", error);
       throw new Error(`Failed to save trip: ${error.message}`);
@@ -64,4 +68,35 @@ export async function loadTripPlan(id: string): Promise<TripPlan | null> {
     return (data?.plan as TripPlan | undefined) ?? null;
   }
   return memoryStore.get(id) ?? null;
+}
+
+export type TripSummary = {
+  id: string;
+  destination: string;
+  summary: string;
+  updatedAt: string;
+};
+
+export async function listTripsForUser(userId: string): Promise<TripSummary[]> {
+  const client = getClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("trips")
+    .select("id, plan, updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(50);
+  if (error) {
+    console.error("supabase trips list error:", error);
+    return [];
+  }
+  return (data ?? []).map((row) => {
+    const plan = row.plan as TripPlan;
+    return {
+      id: row.id as string,
+      destination: plan.destination,
+      summary: plan.summary,
+      updatedAt: row.updated_at as string,
+    };
+  });
 }
