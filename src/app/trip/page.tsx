@@ -6,10 +6,16 @@ import type { TripPlan } from "@/lib/types";
 
 export default function TripPage() {
   const [plan, setPlan] = useState<TripPlan | null>(null);
+  const [previousPlan, setPreviousPlan] = useState<TripPlan | null>(null);
   const [missing, setMissing] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+
+  const [tweak, setTweak] = useState("");
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
+  const [refinedFlash, setRefinedFlash] = useState(false);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("tripsmith:lastTrip");
@@ -22,7 +28,55 @@ export default function TripPage() {
     } catch {
       setMissing(true);
     }
+    const prev = sessionStorage.getItem("tripsmith:previousTrip");
+    if (prev) {
+      try {
+        setPreviousPlan(JSON.parse(prev));
+      } catch {
+        /* ignore */
+      }
+    }
   }, []);
+
+  async function handleRefine(e: React.FormEvent) {
+    e.preventDefault();
+    if (!plan || !tweak.trim()) return;
+    setRefining(true);
+    setRefineError(null);
+    try {
+      const res = await fetch("/api/refine-trip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPlan: plan, tweak: tweak.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
+      sessionStorage.setItem("tripsmith:previousTrip", JSON.stringify(plan));
+      sessionStorage.setItem("tripsmith:lastTrip", JSON.stringify(data));
+      setPreviousPlan(plan);
+      setPlan(data);
+      setTweak("");
+      setRefinedFlash(true);
+      setTimeout(() => setRefinedFlash(false), 2500);
+      // also clear any prior email-sent indicator so user can re-email the updated plan
+      setSent(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setRefineError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setRefining(false);
+    }
+  }
+
+  function handleUndo() {
+    if (!previousPlan) return;
+    sessionStorage.setItem("tripsmith:lastTrip", JSON.stringify(previousPlan));
+    sessionStorage.removeItem("tripsmith:previousTrip");
+    setPlan(previousPlan);
+    setPreviousPlan(null);
+    setSent(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   async function handleEmail() {
     if (!plan) return;
@@ -65,6 +119,20 @@ export default function TripPage() {
   return (
     <main className="flex flex-1 justify-center bg-zinc-50 px-6 py-12 dark:bg-black">
       <div className="w-full max-w-3xl">
+        {refinedFlash && (
+          <div className="mb-6 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+            ✨ Plan updated.{" "}
+            {previousPlan && (
+              <button
+                type="button"
+                onClick={handleUndo}
+                className="font-medium underline underline-offset-4"
+              >
+                Undo
+              </button>
+            )}
+          </div>
+        )}
         <div className="mb-8 flex items-baseline justify-between">
           <div>
             <p className="text-sm uppercase tracking-wider text-zinc-500">Your trip</p>
@@ -113,6 +181,46 @@ export default function TripPage() {
             )}
           </section>
         )}
+
+        <form
+          onSubmit={handleRefine}
+          className="mb-6 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <label htmlFor="tweak" className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Tweak this plan
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              id="tweak"
+              type="text"
+              value={tweak}
+              onChange={(e) => setTweak(e.target.value)}
+              placeholder='e.g. "swap day 2 dinner to seafood", "make day 3 chiller", "add a beach day"'
+              className="flex-1 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            />
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={refining || !tweak.trim()}
+                className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+              >
+                {refining ? "Updating…" : "Refine"}
+              </button>
+              {previousPlan && !refining && (
+                <button
+                  type="button"
+                  onClick={handleUndo}
+                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Undo
+                </button>
+              )}
+            </div>
+          </div>
+          {refineError && (
+            <p className="mt-2 text-sm text-red-600">{refineError}</p>
+          )}
+        </form>
 
         <div className="mb-10 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           {sent ? (

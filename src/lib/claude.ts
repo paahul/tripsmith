@@ -58,6 +58,82 @@ Output STRICT JSON with this shape (no markdown, no commentary):
   "weatherSummary": string
 }`;
 
+const REFINE_SYSTEM_PROMPT = `You are tripsmith refining an existing trip plan.
+
+You receive:
+1. An existing TripPlan JSON
+2. A short instruction from the user describing what to change
+
+Your job: return an UPDATED TripPlan as STRICT JSON, same schema as the input. Apply the requested change(s). Preserve everything else EXACTLY as-is — same destination, same dates, same flight/accommodation entries unless explicitly asked to change them, same budget shape.
+
+Rules:
+- Only change what was asked. Do not silently rewrite unrelated fields.
+- If the user asks for a vibe change ("make day 3 chiller"), update that day's activities/meals but keep everything else intact.
+- If the user adds something, add it — don't drop other things to make room unless they asked you to.
+- If the user requests something impossible or contradictory, return the plan unchanged and put a one-line note in budgetSummary.notes explaining why.
+- After changes, recompute budgetSummary if hotel/flight prices or trip length implicitly changed. Otherwise leave it alone.
+- Keep all field formats and lengths consistent with the original (short strings, brand examples, etc.)
+
+Output STRICT JSON — same TripPlan schema as input. No prose, no markdown.`;
+
+export async function refineTripPlan(input: {
+  currentPlan: TripPlan;
+  tweak: string;
+}): Promise<TripPlan> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
+
+  const client = new Anthropic({ apiKey });
+
+  const userMessage = `# Existing TripPlan
+${JSON.stringify(input.currentPlan, null, 2)}
+
+# User's requested change
+${input.tweak}
+
+Return the updated TripPlan JSON now.`;
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 6000,
+    system: [
+      {
+        type: "text",
+        text: REFINE_SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: [{ role: "user", content: userMessage }],
+  });
+
+  const textBlock = response.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("No text response from Claude");
+  }
+
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(
+      "Updated plan was too long to fit — try a more targeted change.",
+    );
+  }
+
+  const raw = textBlock.text.trim();
+  const jsonStart = raw.indexOf("{");
+  const jsonEnd = raw.lastIndexOf("}");
+  if (jsonStart === -1 || jsonEnd === -1) {
+    throw new Error(`Could not find JSON in Claude refine response: ${raw.slice(0, 200)}`);
+  }
+  const jsonStr = raw.slice(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(jsonStr) as TripPlan;
+  } catch (err) {
+    throw new Error(
+      `Got a malformed refined plan. Try again. (${err instanceof Error ? err.message : err})`,
+    );
+  }
+}
+
 export async function generateTripPlan(input: {
   profile: Profile;
   request: TripRequest;
