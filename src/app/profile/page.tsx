@@ -1,13 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadProfile, saveProfile } from "@/lib/profile";
 import { STAYS_TIERS, type Profile, type StaysTier } from "@/lib/types";
 
 function clampTierIndex(i: number) {
   return Math.max(0, Math.min(STAYS_TIERS.length - 1, i));
+}
+
+const SOLO_CHIPS = [
+  "higher-end stays",
+  "more cafe-hopping",
+  "fewer big tours",
+  "off-the-beaten-path",
+  "long walks, no agenda",
+];
+
+const FAMILY_CHIPS = [
+  "apartments over hotels",
+  "kid-friendly activities",
+  "earlier dinners",
+  "pool/playground access",
+  "less walking",
+  "direct flights preferred",
+];
+
+const PACE_OPTIONS: Array<{ id: Profile["pace"]; label: string; hint: string }> = [
+  { id: "packed", label: "Packed", hint: "See everything" },
+  { id: "balanced", label: "Balanced", hint: "A few per day" },
+  { id: "slow", label: "Slow", hint: "One anchor, then wander" },
+];
+
+function completion(p: Profile) {
+  const fields = [
+    p.homeAirport,
+    p.stays.style,
+    p.stays.avoid,
+    p.stays.regionalAdjustments,
+    p.food.style,
+    p.food.dietary,
+    p.food.avoid,
+    p.soloMode,
+    p.familyMode,
+    p.freeform,
+  ];
+  return { filled: fields.filter((f) => f.trim().length > 0).length, total: fields.length };
+}
+
+function sectionFilledCount(values: string[]): number {
+  return values.filter((v) => v.trim().length > 0).length;
 }
 
 export default function ProfilePage() {
@@ -19,9 +62,12 @@ export default function ProfilePage() {
     setProfile(loadProfile());
   }, []);
 
+  const stats = useMemo(() => (profile ? completion(profile) : { filled: 0, total: 10 }), [profile]);
+
   if (!profile) return null;
 
   function update<K extends keyof Profile>(key: K, value: Profile[K]) {
+    setSaved(false);
     setProfile((p) => (p ? { ...p, [key]: value } : p));
   }
 
@@ -30,9 +76,21 @@ export default function ProfilePage() {
     key: K,
     value: Profile[S][K],
   ) {
+    setSaved(false);
     setProfile((p) => {
       if (!p) return p;
       return { ...p, [section]: { ...p[section], [key]: value } };
+    });
+  }
+
+  function appendToField<K extends "soloMode" | "familyMode">(key: K, chip: string) {
+    setSaved(false);
+    setProfile((p) => {
+      if (!p) return p;
+      const current = p[key];
+      if (current.toLowerCase().includes(chip.toLowerCase())) return p;
+      const next = current.trim().length === 0 ? chip : `${current.trim()}, ${chip}`;
+      return { ...p, [key]: next };
     });
   }
 
@@ -41,11 +99,10 @@ export default function ProfilePage() {
     if (!profile) return;
     saveProfile(profile);
     setSaved(true);
-    setTimeout(() => router.push("/plan"), 600);
   }
 
   return (
-    <main className="flex flex-1 justify-center px-6 py-12">
+    <main className="flex flex-1 justify-center px-6 pb-32 pt-12">
       <div className="w-full max-w-2xl">
         <TopoBand />
 
@@ -55,6 +112,9 @@ export default function ProfilePage() {
               Your travel profile
             </p>
             <h1 className="font-serif text-4xl font-light text-ink">How do you travel?</h1>
+            <p className="mt-2 text-xs text-muted">
+              {stats.filled} of {stats.total} fields filled
+            </p>
           </div>
           <Link href="/" className="text-sm text-muted hover:text-terracotta">
             ← home
@@ -65,8 +125,12 @@ export default function ProfilePage() {
           Saved locally — nothing leaves your browser until you ask for a plan.
         </p>
 
-        <form onSubmit={handleSave} className="space-y-12">
-          <Section title="Basics">
+        <form id="profile-form" onSubmit={handleSave} className="space-y-6">
+          <Section
+            title="Basics"
+            filled={sectionFilledCount([profile.homeAirport])}
+            total={1}
+          >
             <Field label="Name (optional)">
               <Input value={profile.name ?? ""} onChange={(v) => update("name", v)} />
             </Field>
@@ -79,7 +143,15 @@ export default function ProfilePage() {
             </Field>
           </Section>
 
-          <Section title="Where you stay">
+          <Section
+            title="Where you stay"
+            filled={sectionFilledCount([
+              profile.stays.style,
+              profile.stays.avoid,
+              profile.stays.regionalAdjustments,
+            ])}
+            total={3}
+          >
             <Field label="Style">
               <Textarea
                 value={profile.stays.style}
@@ -100,12 +172,12 @@ export default function ProfilePage() {
               <TierPicker
                 value={profile.stays.tierSolo}
                 onChange={(v) => {
-                  // Preserve the family delta when the default tier changes.
                   const oldSoloIdx = STAYS_TIERS.findIndex((t) => t.id === profile.stays.tierSolo);
                   const oldFamilyIdx = STAYS_TIERS.findIndex((t) => t.id === profile.stays.tierFamily);
                   const delta = oldFamilyIdx - oldSoloIdx;
                   const newSoloIdx = STAYS_TIERS.findIndex((t) => t.id === v);
                   const newFamilyId = STAYS_TIERS[clampTierIndex(newSoloIdx + delta)].id;
+                  setSaved(false);
                   setProfile((p) =>
                     p
                       ? { ...p, stays: { ...p.stays, tierSolo: v, tierFamily: newFamilyId } }
@@ -137,7 +209,11 @@ export default function ProfilePage() {
             </Field>
           </Section>
 
-          <Section title="Where you eat">
+          <Section
+            title="Where you eat"
+            filled={sectionFilledCount([profile.food.style, profile.food.dietary, profile.food.avoid])}
+            total={3}
+          >
             <Field label="Style">
               <Textarea
                 value={profile.food.style}
@@ -161,26 +237,37 @@ export default function ProfilePage() {
             </Field>
           </Section>
 
-          <Section title="How you travel">
+          <Section
+            title="How you travel"
+            filled={sectionFilledCount([profile.soloMode, profile.familyMode])}
+            total={2}
+          >
             <Field label="Pace">
-              <select
+              <PaceCards
                 value={profile.pace}
-                onChange={(e) => update("pace", e.target.value as Profile["pace"])}
-                className="w-full rounded border border-line bg-paper px-3 py-2 text-base focus:border-terracotta focus:outline-none"
-              >
-                <option value="packed">Packed — see everything</option>
-                <option value="balanced">Balanced — a few things per day</option>
-                <option value="slow">Slow — one anchor, then wander</option>
-              </select>
+                onChange={(v) => update("pace", v)}
+              />
             </Field>
+
             <Field label="Solo mode — how this changes when you're alone">
+              <ChipRow
+                chips={SOLO_CHIPS}
+                currentValue={profile.soloMode}
+                onPick={(c) => appendToField("soloMode", c)}
+              />
               <Textarea
                 value={profile.soloMode}
                 onChange={(v) => update("soloMode", v)}
                 placeholder="higher-end stays, more cafe-hopping, fewer big tours"
               />
             </Field>
+
             <Field label="Family mode — how this changes with family">
+              <ChipRow
+                chips={FAMILY_CHIPS}
+                currentValue={profile.familyMode}
+                onPick={(c) => appendToField("familyMode", c)}
+              />
               <Textarea
                 value={profile.familyMode}
                 onChange={(v) => update("familyMode", v)}
@@ -189,7 +276,11 @@ export default function ProfilePage() {
             </Field>
           </Section>
 
-          <Section title="Anything else">
+          <Section
+            title="Anything else"
+            filled={sectionFilledCount([profile.freeform])}
+            total={1}
+          >
             <Field label="Free-text — anything tripsmith should know">
               <Textarea
                 value={profile.freeform}
@@ -198,34 +289,99 @@ export default function ProfilePage() {
               />
             </Field>
           </Section>
-
-          <div className="flex items-center gap-5">
-            <button
-              type="submit"
-              className="rounded bg-terracotta px-6 py-2.5 text-sm font-medium text-cream hover:bg-terracotta-deep"
-            >
-              Save profile
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/plan")}
-              className="text-sm font-medium text-ink underline-offset-4 hover:underline"
-            >
-              Plan a trip →
-            </button>
-            {saved && <span className="text-sm italic text-moss">Saved.</span>}
-          </div>
         </form>
       </div>
+
+      <StickySaveBar
+        saved={saved}
+        onPlan={() => router.push("/plan")}
+      />
     </main>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function StickySaveBar({ saved, onPlan }: { saved: boolean; onPlan: () => void }) {
   return (
-    <fieldset className="space-y-5">
-      <legend className="mb-3 font-serif text-2xl font-light text-ink">{title}</legend>
-      {children}
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream/95 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-2xl items-center gap-5 px-6 py-3">
+        <button
+          type="submit"
+          form="profile-form"
+          className="rounded bg-terracotta px-6 py-2.5 text-sm font-medium text-cream hover:bg-terracotta-deep"
+        >
+          Save profile
+        </button>
+        <button
+          type="button"
+          onClick={onPlan}
+          className="text-sm font-medium text-ink underline-offset-4 hover:underline"
+        >
+          Plan a trip →
+        </button>
+        {saved && <span className="text-sm italic text-moss">Saved.</span>}
+      </div>
+    </div>
+  );
+}
+
+function TopoBand() {
+  return (
+    <svg
+      viewBox="0 0 800 90"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      className="mb-10 h-20 w-full text-line-strong"
+    >
+      <g fill="none" stroke="currentColor" strokeWidth="0.6" strokeLinecap="round">
+        <path d="M0,18 C140,2 260,42 420,18 C560,-2 680,32 800,14" />
+        <path d="M0,34 C120,18 240,58 400,34 C560,12 680,52 800,32" />
+        <path d="M0,50 C160,34 280,74 420,50 C580,28 700,68 800,50" />
+        <path d="M0,66 C140,50 260,90 420,66 C560,46 680,82 800,68" />
+        <path d="M0,82 C120,68 240,100 400,82 C560,62 700,98 800,86" />
+      </g>
+      <g fill="currentColor" opacity="0.5">
+        <circle cx="180" cy="42" r="1.4" />
+        <circle cx="520" cy="34" r="1.4" />
+        <circle cx="680" cy="58" r="1.4" />
+      </g>
+    </svg>
+  );
+}
+
+function Section({
+  title,
+  filled,
+  total,
+  children,
+}: {
+  title: string;
+  filled: number;
+  total: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+  const complete = filled === total && total > 0;
+  return (
+    <fieldset className="border-t border-line pt-5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-baseline justify-between text-left"
+      >
+        <legend className="font-serif text-2xl font-light text-ink">{title}</legend>
+        <div className="flex items-baseline gap-3">
+          <span className={`text-xs ${complete ? "text-moss" : "text-muted"}`}>
+            {filled}/{total}
+          </span>
+          <span
+            className="font-mono text-xs text-muted"
+            aria-hidden="true"
+          >
+            {open ? "−" : "+"}
+          </span>
+        </div>
+      </button>
+      {open && <div className="mt-5 space-y-5">{children}</div>}
     </fieldset>
   );
 }
@@ -272,28 +428,73 @@ function Textarea(props: {
   );
 }
 
-function TopoBand() {
-  // Stylized topographic contour lines. Neutral, editorial, no photo needed.
+function ChipRow({
+  chips,
+  currentValue,
+  onPick,
+}: {
+  chips: string[];
+  currentValue: string;
+  onPick: (chip: string) => void;
+}) {
   return (
-    <svg
-      viewBox="0 0 800 90"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      className="mb-10 h-20 w-full text-line-strong"
-    >
-      <g fill="none" stroke="currentColor" strokeWidth="0.6" strokeLinecap="round">
-        <path d="M0,18 C140,2 260,42 420,18 C560,-2 680,32 800,14" />
-        <path d="M0,34 C120,18 240,58 400,34 C560,12 680,52 800,32" />
-        <path d="M0,50 C160,34 280,74 420,50 C580,28 700,68 800,50" />
-        <path d="M0,66 C140,50 260,90 420,66 C560,46 680,82 800,68" />
-        <path d="M0,82 C120,68 240,100 400,82 C560,62 700,98 800,86" />
-      </g>
-      <g fill="currentColor" opacity="0.5">
-        <circle cx="180" cy="42" r="1.4" />
-        <circle cx="520" cy="34" r="1.4" />
-        <circle cx="680" cy="58" r="1.4" />
-      </g>
-    </svg>
+    <div className="mb-2 flex flex-wrap gap-1.5">
+      {chips.map((c) => {
+        const present = currentValue.toLowerCase().includes(c.toLowerCase());
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onPick(c)}
+            disabled={present}
+            className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
+              present
+                ? "border-line text-muted opacity-50"
+                : "border-line-strong text-ink-2 hover:border-terracotta hover:text-terracotta"
+            }`}
+          >
+            {present ? "✓ " : "+ "}
+            {c}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PaceCards({
+  value,
+  onChange,
+}: {
+  value: Profile["pace"];
+  onChange: (v: Profile["pace"]) => void;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {PACE_OPTIONS.map((o) => {
+        const selected = value === o.id;
+        return (
+          <label
+            key={o.id}
+            className={`flex cursor-pointer flex-col rounded border-2 px-4 py-3 transition ${
+              selected
+                ? "border-terracotta bg-terracotta-soft/40"
+                : "border-line bg-paper hover:border-line-strong"
+            }`}
+          >
+            <input
+              type="radio"
+              name="pace"
+              checked={selected}
+              onChange={() => onChange(o.id)}
+              className="sr-only"
+            />
+            <span className="font-serif text-lg text-ink">{o.label}</span>
+            <span className="font-serif text-xs italic text-muted">{o.hint}</span>
+          </label>
+        );
+      })}
+    </div>
   );
 }
 
@@ -353,7 +554,8 @@ function DeltaPicker({
         );
       })}
       <p className="pl-1 pt-1 text-xs italic text-muted">
-        → Family/group tier: <span className="font-medium not-italic text-ink-2">{resulting.label}</span>
+        → Family/group tier:{" "}
+        <span className="font-medium not-italic text-ink-2">{resulting.label}</span>
       </p>
     </div>
   );
