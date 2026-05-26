@@ -71,6 +71,22 @@ export function tripPlanToHtml(plan: TripPlan): string {
     )
     .join("");
 
+  const budget = plan.budgetSummary
+    ? `
+  <div style="margin-top: 24px; padding: 16px; border: 1px solid #eee; border-radius: 6px; background: #fafafa;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
+      <strong style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #888;">Trip budget — estimated</strong>
+      <span style="font-family: monospace; font-weight: 600;">${escape(plan.budgetSummary.estimatedTotal)}</span>
+    </div>
+    <table style="width: 100%; font-size: 14px;">
+      <tr><td style="color: #666;">Flights</td><td style="text-align: right; font-family: monospace;">${escape(plan.budgetSummary.flights)}</td></tr>
+      <tr><td style="color: #666;">Stay</td><td style="text-align: right; font-family: monospace;">${escape(plan.budgetSummary.accommodation)}</td></tr>
+      <tr><td style="color: #666;">Food + activities</td><td style="text-align: right; font-family: monospace;">${escape(plan.budgetSummary.foodAndActivities)}</td></tr>
+    </table>
+    ${plan.budgetSummary.notes ? `<p style="margin: 10px 0 0; font-size: 12px; font-style: italic; color: #888;">${escape(plan.budgetSummary.notes)}</p>` : ""}
+  </div>`
+    : "";
+
   return `
 <!DOCTYPE html>
 <html>
@@ -78,6 +94,7 @@ export function tripPlanToHtml(plan: TripPlan): string {
   <div style="text-transform: uppercase; font-size: 11px; letter-spacing: 0.08em; color: #888;">Your trip</div>
   <h1 style="margin: 4px 0 16px; font-size: 28px;">${escape(plan.destination)}</h1>
   <p style="font-size: 16px; line-height: 1.5; color: #333;">${escape(plan.summary)}</p>
+  ${budget}
 
   <h2 style="font-size: 18px; margin-top: 32px; margin-bottom: 4px;">✈️ Flights</h2>
   <p style="font-size: 13px; color: #888; margin-top: 0;">Click through to book — prices are estimates.</p>

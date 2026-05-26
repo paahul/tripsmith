@@ -9,7 +9,21 @@ export function loadProfile(): Profile {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_PROFILE;
-    return { ...DEFAULT_PROFILE, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<Profile> & {
+      stays?: Record<string, unknown>;
+    };
+    return {
+      ...DEFAULT_PROFILE,
+      ...parsed,
+      stays: {
+        ...DEFAULT_PROFILE.stays,
+        ...(parsed.stays as Profile["stays"] | undefined),
+      },
+      food: {
+        ...DEFAULT_PROFILE.food,
+        ...(parsed.food as Profile["food"] | undefined),
+      },
+    };
   } catch {
     return DEFAULT_PROFILE;
   }

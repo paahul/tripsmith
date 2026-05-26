@@ -82,7 +82,37 @@ export default function TripPage() {
           </div>
         </div>
 
-        <p className="mb-8 text-lg text-zinc-700 dark:text-zinc-300">{plan.summary}</p>
+        <p className="mb-6 text-lg text-zinc-700 dark:text-zinc-300">{plan.summary}</p>
+
+        {plan.budgetSummary && (
+          <section className="mb-8 rounded-md border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-3 flex items-baseline justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+                Trip budget — estimated
+              </h2>
+              <span className="font-mono text-base font-medium">
+                {plan.budgetSummary.estimatedTotal}
+              </span>
+            </div>
+            <dl className="space-y-1.5 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-zinc-500">Flights</dt>
+                <dd className="text-right font-mono">{plan.budgetSummary.flights}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-zinc-500">Stay</dt>
+                <dd className="text-right font-mono">{plan.budgetSummary.accommodation}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-zinc-500">Food + activities</dt>
+                <dd className="text-right font-mono">{plan.budgetSummary.foodAndActivities}</dd>
+              </div>
+            </dl>
+            {plan.budgetSummary.notes && (
+              <p className="mt-3 text-xs italic text-zinc-500">{plan.budgetSummary.notes}</p>
+            )}
+          </section>
+        )}
 
         <div className="mb-10 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           {sent ? (

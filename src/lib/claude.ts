@@ -15,9 +15,19 @@ Your job: synthesize a complete, actionable trip plan as STRICT JSON matching th
 
 **CRITICAL: keep the output compact. Every string field must be brief — typically under 100 characters. Activity descriptions, "why it fits", meal descriptions, tips: one short sentence, never two. No filler words. No restating the question.**
 
-Rules:
-- Accommodation picks match the profile's stay style; lean into family mode if mode === "family".
-- 3 flight options. Price as estimated range ("~$650–850"). Departure/arrival as short time-of-day labels ("Morning"/"Late evening").
+## Stays tier vocabulary (in profile.stays.tierSolo / tierFamily)
+
+Calibrate accommodation picks AND price to the local market. Pick the tier matching the trip mode (solo vs family/couple/friends → tierFamily). Also respect profile.stays.regionalAdjustments — if the user calls out a regional override, follow it.
+
+- **budget**: hostels (private rooms), guesthouses, family-run B&Bs, budget chains. Clean basics. (~$25–80 SE Asia · $30–80 S. America · $80–150 W. Europe · $100–180 US.)
+- **standard**: 3-star hotels, mid-range Airbnbs, well-reviewed B&Bs. Predictable, decent location. (~$50–150 SE Asia · $60–150 S. America · $150–250 W. Europe · $200–350 US.)
+- **comfort**: 4-star, boutique, design-forward Airbnbs. Thoughtful interiors, walkable neighborhoods. (~$100–250 SE Asia · $120–280 S. America · $250–400 W. Europe · $350–550 US.)
+- **luxury**: 5-star, luxury resorts, design hotels, top-end Airbnbs. (~$250–500 SE Asia · $300–600 S. America · $500–900 W. Europe · $700–1500 US.)
+
+Use the tier to set pricePerNight in your output (in local market terms, not the home market).
+
+## Rules
+- 3 flight options. Price as estimated range ("~$650–850") PER PERSON. Departure/arrival as short time-of-day labels ("Morning"/"Late evening").
 - Flight bookingLink: https://www.google.com/travel/flights?q=Flights%20from%20{ORIGIN}%20to%20{DEST_CITY}%20on%20{YYYY-MM-DD}%20through%20{YYYY-MM-DD}
 - Accommodation bookingLink: https://www.booking.com/searchresults.html?ss={DEST_CITY_URLENCODED}&checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&group_adults={N}
   Airbnb-style: https://www.airbnb.com/s/{DEST_CITY_URLENCODED}/homes?checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&adults={N}
@@ -26,10 +36,20 @@ Rules:
 - Local transport: 1-2 short sentences.
 - summary: 1-2 sentences. weatherSummary: 1 sentence with key numbers.
 
+## budgetSummary
+
+Compute totals across the trip as compact strings. Use the flight price × travelers, and pricePerNight × nights. Add a rough food + activities estimate based on tier and destination cost level. Format examples:
+- flights: "$1,300–1,700 for 2 travelers"
+- accommodation: "$1,500–2,500 for 5 nights"
+- foodAndActivities: "~$400–800"
+- estimatedTotal: "~$3,200–5,000 for the trip"
+- notes: short caveat if helpful (optional, omit if not)
+
 Output STRICT JSON with this shape (no markdown, no commentary):
 {
   "destination": string,
   "summary": string,
+  "budgetSummary": { "flights": string, "accommodation": string, "foodAndActivities": string, "estimatedTotal": string, "notes": string },
   "flights": [{ "airline": string, "price": string, "duration": string, "stops": number, "departure": string, "arrival": string, "bookingLink": string }],
   "accommodations": [{ "name": string, "style": string, "pricePerNight": string, "whyItFits": string, "bookingLink": string }],
   "localTransport": string,

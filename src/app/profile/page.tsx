@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadProfile, saveProfile } from "@/lib/profile";
-import type { Profile } from "@/lib/types";
+import { STAYS_TIERS, type Profile, type StaysTier } from "@/lib/types";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -21,10 +21,10 @@ export default function ProfilePage() {
     setProfile((p) => (p ? { ...p, [key]: value } : p));
   }
 
-  function updateNested<S extends "stays" | "food">(
+  function updateNested<S extends "stays" | "food", K extends keyof Profile[S]>(
     section: S,
-    key: keyof Profile[S],
-    value: string,
+    key: K,
+    value: Profile[S][K],
   ) {
     setProfile((p) => {
       if (!p) return p;
@@ -84,18 +84,35 @@ export default function ProfilePage() {
                 onChange={(v) => updateNested("stays", "avoid", v)}
               />
             </Field>
-            <Field label="Budget per night — solo">
-              <Input
-                value={profile.stays.budgetPerNightSolo}
-                onChange={(v) => updateNested("stays", "budgetPerNightSolo", v)}
-                placeholder="e.g. $150–250"
+
+            <div>
+              <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Tier — solo trips
+              </span>
+              <TierPicker
+                value={profile.stays.tierSolo}
+                onChange={(v) => updateNested("stays", "tierSolo", v)}
+                name="tierSolo"
               />
-            </Field>
-            <Field label="Budget per night — family">
-              <Input
-                value={profile.stays.budgetPerNightFamily}
-                onChange={(v) => updateNested("stays", "budgetPerNightFamily", v)}
-                placeholder="e.g. $250–400"
+            </div>
+
+            <div>
+              <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Tier — family / group trips
+              </span>
+              <TierPicker
+                value={profile.stays.tierFamily}
+                onChange={(v) => updateNested("stays", "tierFamily", v)}
+                name="tierFamily"
+              />
+            </div>
+
+            <Field label="Regional adjustments (optional — when does this change?)">
+              <Textarea
+                value={profile.stays.regionalAdjustments}
+                onChange={(v) => updateNested("stays", "regionalAdjustments", v)}
+                placeholder="e.g. In SE Asia I'd downshift to Standard — dollars stretch further. In Europe I prefer apartments over hotels."
+                rows={3}
               />
             </Field>
           </Section>
@@ -235,5 +252,54 @@ function Textarea(props: {
       rows={props.rows ?? 3}
       className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-600"
     />
+  );
+}
+
+function TierPicker({
+  value,
+  onChange,
+  name,
+}: {
+  value: StaysTier;
+  onChange: (v: StaysTier) => void;
+  name: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {STAYS_TIERS.map((t) => {
+        const selected = value === t.id;
+        return (
+          <label
+            key={t.id}
+            className={`block cursor-pointer rounded-md border p-3 transition ${
+              selected
+                ? "border-black bg-zinc-50 dark:border-zinc-200 dark:bg-zinc-900"
+                : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-600"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <input
+                type="radio"
+                name={name}
+                checked={selected}
+                onChange={() => onChange(t.id)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-medium">{t.label}</span>
+                  <span className="text-xs italic text-zinc-500">{t.tagline}</span>
+                </div>
+                <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">{t.description}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  <span className="font-medium">Examples:</span> {t.examples}
+                </p>
+                <p className="mt-1 font-mono text-xs text-zinc-500">{t.prices}</p>
+              </div>
+            </div>
+          </label>
+        );
+      })}
+    </div>
   );
 }
