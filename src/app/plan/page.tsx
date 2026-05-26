@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasProfile, loadProfile } from "@/lib/profile";
-import type { TripRequest } from "@/lib/types";
+import { MAX_TRIP_DAYS, tripLengthDays, type TripRequest } from "@/lib/types";
 
 export default function PlanPage() {
   const router = useRouter();
@@ -20,6 +20,12 @@ export default function PlanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const days = tripLengthDays(request.startDate, request.endDate);
+  const tooLong = days > MAX_TRIP_DAYS;
+  const datesInvalid =
+    !!request.startDate && !!request.endDate && new Date(request.endDate) < new Date(request.startDate);
+  const submitDisabled = loading || tooLong || datesInvalid;
+
   useEffect(() => {
     setProfileReady(hasProfile());
   }, []);
@@ -29,6 +35,14 @@ export default function PlanPage() {
     setError(null);
     if (request.travelers < 1) {
       setError("Travelers must be at least 1.");
+      return;
+    }
+    if (datesInvalid) {
+      setError("End date must be on or after the start date.");
+      return;
+    }
+    if (tooLong) {
+      setError(`Maximum ${MAX_TRIP_DAYS} days per plan. Pick a shorter range, or plan multi-leg trips separately.`);
       return;
     }
     setLoading(true);
@@ -107,6 +121,20 @@ export default function PlanPage() {
             </Field>
           </div>
 
+          {days > 0 && (
+            <p
+              className={`text-sm ${
+                tooLong || datesInvalid ? "text-amber-700 dark:text-amber-400" : "text-zinc-500"
+              }`}
+            >
+              {datesInvalid
+                ? "End date must be on or after the start date."
+                : tooLong
+                  ? `${days} days — maximum ${MAX_TRIP_DAYS} per plan. Pick a shorter range, or plan multi-leg trips separately.`
+                  : `${days} day${days === 1 ? "" : "s"}`}
+            </p>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <Field label="Who's coming">
               <select
@@ -162,7 +190,7 @@ export default function PlanPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={submitDisabled}
             className="rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
           >
             {loading ? "Planning… (this takes 20–40s)" : "Plan my trip"}

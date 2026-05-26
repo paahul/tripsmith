@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getWeather } from "@/lib/openweather";
 import { generateTripPlan } from "@/lib/claude";
-import type { Profile, TripRequest } from "@/lib/types";
+import { MAX_TRIP_DAYS, tripLengthDays, type Profile, type TripRequest } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,6 +19,22 @@ export async function POST(req: Request) {
     }
     if (!trip?.destination || !trip?.startDate || !trip?.endDate) {
       return NextResponse.json({ error: "Missing destination or dates." }, { status: 400 });
+    }
+
+    const days = tripLengthDays(trip.startDate, trip.endDate);
+    if (days < 1) {
+      return NextResponse.json(
+        { error: "End date must be on or after the start date." },
+        { status: 400 },
+      );
+    }
+    if (days > MAX_TRIP_DAYS) {
+      return NextResponse.json(
+        {
+          error: `Maximum ${MAX_TRIP_DAYS} days per plan. Pick a shorter range, or plan multi-leg trips separately.`,
+        },
+        { status: 400 },
+      );
     }
 
     const weather = await getWeather(trip.destination).catch(() => null);

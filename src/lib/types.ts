@@ -1,3 +1,13 @@
+export const MAX_TRIP_DAYS = 10;
+
+export function tripLengthDays(startDate: string, endDate: string): number {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  if (isNaN(start) || isNaN(end) || end < start) return 0;
+  return Math.floor((end - start) / 86_400_000) + 1;
+}
+
 export type Profile = {
   name?: string;
   homeAirport: string;
