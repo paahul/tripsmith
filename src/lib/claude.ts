@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { Profile, TripPlan, TripRequest } from "./types";
 import type { WeatherSummary } from "./openweather";
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-haiku-4-5";
 
 const SYSTEM_PROMPT = `You are tripsmith, a meticulous personal travel planner.
 
@@ -63,7 +63,7 @@ Generate the TripPlan JSON now.`;
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 8000,
+    max_tokens: 5000,
     system: [
       {
         type: "text",
