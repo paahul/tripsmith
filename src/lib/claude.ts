@@ -13,20 +13,16 @@ You receive:
 
 Your job: synthesize a complete, actionable trip plan as STRICT JSON matching the TripPlan schema. No prose outside JSON.
 
-Rules:
-- Tailor accommodation picks to the traveler's stated stay style. If their family mode differs from solo mode and the trip is "family", lean into family-mode preferences.
-- For flights: suggest 3 plausible airline options for the route. Price should be a realistic estimated range (e.g. "~$650–850") — clearly an estimate, not a quote. Departure/arrival should be illustrative time-of-day suggestions (e.g. "Morning depart" / "Late evening arrive"), not specific timestamps you can't verify.
-- For flight bookingLink: use Google Flights deep-link format. Construct as:
-  https://www.google.com/travel/flights?q=Flights%20from%20{ORIGIN}%20to%20{DEST_CITY}%20on%20{YYYY-MM-DD}%20through%20{YYYY-MM-DD}
-- For accommodations: 3 picks matched to the profile's stay style. Use neighborhood/area + style descriptors when you don't know specific properties. Always include "whyItFits" tied to the profile.
-- For accommodation bookingLink: use Booking.com format:
-  https://www.booking.com/searchresults.html?ss={DEST_CITY_URLENCODED}&checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&group_adults={N}
-  If the pick is more Airbnb-style, use:
-  https://www.airbnb.com/s/{DEST_CITY_URLENCODED}/homes?checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&adults={N}
-- Itinerary: one entry per day between startDate and endDate inclusive. Pace matches the profile.
-- Packing list reflects the actual weather (temps + rainy days). Include a "buy before you go" category if there are gaps for that destination/season.
-- Meals match the profile's food style. Mention 1–2 standout restaurants by name if you have confidence in them for the city.
-- Local transport: actionable guidance (e.g. "Buy a Lisboa Card for metro + trams", "Uber works well, rental car not needed").
+Rules (keep concise — every field one or two short sentences max):
+- Accommodation picks match the profile's stay style; lean into family mode if mode === "family".
+- 3 flight options. Price as estimated range ("~$650–850"). Departure/arrival as time-of-day labels ("Morning"/"Late evening"), not timestamps.
+- Flight bookingLink: https://www.google.com/travel/flights?q=Flights%20from%20{ORIGIN}%20to%20{DEST_CITY}%20on%20{YYYY-MM-DD}%20through%20{YYYY-MM-DD}
+- Accommodation bookingLink: https://www.booking.com/searchresults.html?ss={DEST_CITY_URLENCODED}&checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&group_adults={N}
+  Airbnb-style: https://www.airbnb.com/s/{DEST_CITY_URLENCODED}/homes?checkin={YYYY-MM-DD}&checkout={YYYY-MM-DD}&adults={N}
+- Itinerary: one entry per day. Max 3 activities per day, max 2 meals per day. Keep descriptions short.
+- Packing list: 4-5 categories max, ~6 items each.
+- Meals: name 1-2 standout restaurants if you know the city well.
+- Local transport: 1-2 short sentences with concrete guidance.
 
 Output STRICT JSON with this shape (no markdown, no commentary):
 {
@@ -63,7 +59,7 @@ Generate the TripPlan JSON now.`;
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 5000,
+    max_tokens: 3500,
     system: [
       {
         type: "text",
