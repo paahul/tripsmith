@@ -46,6 +46,34 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+function SiteFooter() {
+  return (
+    <footer className="border-t border-line bg-cream/60">
+      <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-2 px-6 py-4 text-xs italic text-muted sm:flex-row sm:items-center">
+        <span>A side project by Paahul Sikand.</span>
+        <div className="flex items-center gap-4 not-italic">
+          <a
+            href="https://github.com/paahul/tripsmith"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-terracotta"
+          >
+            GitHub
+          </a>
+          <a
+            href="https://www.linkedin.com/in/paahul/"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-terracotta"
+          >
+            LinkedIn
+          </a>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -56,7 +84,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-cream text-ink">{children}</body>
+      <body className="min-h-full flex flex-col bg-cream text-ink">
+        {children}
+        <SiteFooter />
+      </body>
     </html>
   );
 }
