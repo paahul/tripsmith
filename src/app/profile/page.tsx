@@ -322,7 +322,7 @@ export default function ProfilePage() {
 
 function StickySaveBar({ saved, onPlan }: { saved: boolean; onPlan: () => void }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream/95 backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex w-full max-w-2xl items-center gap-5 px-6 py-3">
         <button
           type="submit"

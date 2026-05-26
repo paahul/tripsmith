@@ -529,7 +529,7 @@ function RefineBar({
   onUndo: () => void;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream/95 backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
       <form
         onSubmit={onSubmit}
         className="mx-auto flex w-full max-w-3xl flex-col gap-1 px-6 py-3"
