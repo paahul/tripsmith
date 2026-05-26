@@ -104,10 +104,12 @@ export default function PlanPage() {
         const text = await res.text();
         throw new Error(text || `Request failed (${res.status})`);
       }
-      const data = await res.json();
-      sessionStorage.setItem("tripsmith:lastTrip", JSON.stringify(data));
-      sessionStorage.removeItem("tripsmith:previousTrip");
-      router.push("/trip");
+      const data = (await res.json()) as { id?: string };
+      if (!data?.id) {
+        throw new Error("Server did not return a trip id.");
+      }
+      sessionStorage.setItem(`tripsmith:trip:${data.id}`, JSON.stringify(data));
+      router.push(`/trip/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);

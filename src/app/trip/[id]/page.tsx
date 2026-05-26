@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import type { TripPlan } from "@/lib/types";
+
+type TripPlanWithId = TripPlan & { id?: string };
+
+const CACHE_PREFIX = "tripsmith:trip:";
+const PREV_PREFIX = "tripsmith:prev:";
 
 const ANCHORS = [
   { id: "summary", label: "Summary" },
@@ -13,10 +18,12 @@ const ANCHORS = [
   { id: "packing", label: "Packing" },
 ];
 
-export default function TripPage() {
-  const [plan, setPlan] = useState<TripPlan | null>(null);
-  const [previousPlan, setPreviousPlan] = useState<TripPlan | null>(null);
+export default function TripPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [plan, setPlan] = useState<TripPlanWithId | null>(null);
+  const [previousPlan, setPreviousPlan] = useState<TripPlanWithId | null>(null);
   const [missing, setMissing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -27,17 +34,17 @@ export default function TripPage() {
   const [refinedFlash, setRefinedFlash] = useState(false);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("tripsmith:lastTrip");
-    if (!raw) {
-      setMissing(true);
-      return;
+    // Render from sessionStorage cache first for instant paint.
+    const cached = sessionStorage.getItem(CACHE_PREFIX + id);
+    if (cached) {
+      try {
+        setPlan(JSON.parse(cached));
+        setLoading(false);
+      } catch {
+        /* fall through to fetch */
+      }
     }
-    try {
-      setPlan(JSON.parse(raw));
-    } catch {
-      setMissing(true);
-    }
-    const prev = sessionStorage.getItem("tripsmith:previousTrip");
+    const prev = sessionStorage.getItem(PREV_PREFIX + id);
     if (prev) {
       try {
         setPreviousPlan(JSON.parse(prev));
@@ -45,17 +52,37 @@ export default function TripPage() {
         /* ignore */
       }
     }
-  }, []);
+    // Always verify against the server in case the trip was refined elsewhere.
+    fetch(`/api/trip/${id}`)
+      .then(async (res) => {
+        if (res.status === 404) {
+          setMissing(true);
+          return;
+        }
+        if (!res.ok) throw new Error(`Failed (${res.status})`);
+        const data = (await res.json()) as TripPlan;
+        const withId = { ...data, id };
+        setPlan(withId);
+        sessionStorage.setItem(CACHE_PREFIX + id, JSON.stringify(withId));
+      })
+      .catch(() => {
+        // If we already have a cached plan, keep showing it; otherwise mark missing.
+        if (!cached) setMissing(true);
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
 
   async function handleEmail() {
     if (!plan) return;
     setSending(true);
     setSendError(null);
     try {
+      const shareUrl =
+        typeof window !== "undefined" ? `${window.location.origin}/trip/${id}` : undefined;
       const res = await fetch("/api/email-trip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, shareUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
@@ -67,6 +94,16 @@ export default function TripPage() {
     }
   }
 
+  const [copied, setCopied] = useState(false);
+  function handleCopyLink() {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/trip/${id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+
   async function handleRefine(e: React.FormEvent) {
     e.preventDefault();
     if (!plan || !tweak.trim()) return;
@@ -76,12 +113,12 @@ export default function TripPage() {
       const res = await fetch("/api/refine-trip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPlan: plan, tweak: tweak.trim() }),
+        body: JSON.stringify({ currentPlan: plan, tweak: tweak.trim(), id }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as TripPlanWithId & { error?: string };
       if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
-      sessionStorage.setItem("tripsmith:previousTrip", JSON.stringify(plan));
-      sessionStorage.setItem("tripsmith:lastTrip", JSON.stringify(data));
+      sessionStorage.setItem(PREV_PREFIX + id, JSON.stringify(plan));
+      sessionStorage.setItem(CACHE_PREFIX + id, JSON.stringify(data));
       setPreviousPlan(plan);
       setPlan(data);
       setTweak("");
@@ -96,10 +133,19 @@ export default function TripPage() {
     }
   }
 
-  function handleUndo() {
+  async function handleUndo() {
     if (!previousPlan) return;
-    sessionStorage.setItem("tripsmith:lastTrip", JSON.stringify(previousPlan));
-    sessionStorage.removeItem("tripsmith:previousTrip");
+    try {
+      await fetch(`/api/trip/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(previousPlan),
+      });
+    } catch {
+      /* server save is best-effort; local state still rolls back */
+    }
+    sessionStorage.setItem(CACHE_PREFIX + id, JSON.stringify(previousPlan));
+    sessionStorage.removeItem(PREV_PREFIX + id);
     setPlan(previousPlan);
     setPreviousPlan(null);
     setSent(null);
@@ -110,19 +156,32 @@ export default function TripPage() {
     return (
       <main className="flex flex-1 items-center justify-center px-6 py-24">
         <div className="text-center">
-          <p className="font-serif text-xl italic text-muted">No trip plan found.</p>
+          <p className="font-serif text-xl italic text-muted">
+            This trip link doesn&rsquo;t exist anymore.
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            Trips are kept for 90 days after they&rsquo;re last touched.
+          </p>
           <Link
             href="/plan"
-            className="mt-4 inline-block font-serif text-lg text-ink underline-offset-[6px] decoration-terracotta decoration-2 hover:underline"
+            className="mt-6 inline-block font-serif text-lg text-ink underline-offset-[6px] decoration-terracotta decoration-2 hover:underline"
           >
-            Plan one →
+            Plan a new one →
           </Link>
         </div>
       </main>
     );
   }
 
-  if (!plan) return null;
+  if (!plan) {
+    return (
+      <main className="flex flex-1 items-center justify-center px-6 py-24">
+        <div className="text-center text-sm italic text-muted">
+          {loading ? "Loading trip…" : ""}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex flex-1 flex-col pb-28">
@@ -180,6 +239,14 @@ export default function TripPage() {
 
           {/* Inline secondary action row */}
           <div className="mb-10 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="text-ink hover:text-terracotta"
+            >
+              {copied ? "✓ Link copied" : "Copy share link"}
+            </button>
+            <span className="text-line-strong">·</span>
             {sent ? (
               <span className="text-ink-2">
                 ✓ Emailed to <span className="font-mono">{sent}</span>

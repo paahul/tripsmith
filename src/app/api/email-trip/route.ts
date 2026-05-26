@@ -18,14 +18,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const { plan } = (await req.json()) as { plan: TripPlan };
+    const { plan, shareUrl } = (await req.json()) as { plan: TripPlan; shareUrl?: string };
 
     if (!plan?.destination) {
       return NextResponse.json({ error: "Missing trip plan." }, { status: 400 });
     }
 
     const resend = new Resend(apiKey);
-    const html = tripPlanToHtml(plan);
+    const planHtml = tripPlanToHtml(plan);
+    const html = shareUrl
+      ? `<p style="font-family:sans-serif;font-size:14px;color:#666">View this trip online: <a href="${shareUrl}">${shareUrl}</a></p>${planHtml}`
+      : planHtml;
     const subject = `tripsmith: ${plan.destination}`;
 
     const { data, error } = await resend.emails.send({
