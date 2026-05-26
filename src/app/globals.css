@@ -64,8 +64,9 @@ h1, h2, h3, .serif {
   font-feature-settings: "ss01";
 }
 
-/* react-day-picker custom styling */
-.rdp-root {
+/* react-day-picker custom styling. Doubled selector to outweigh
+   the library's own prefers-color-scheme: dark block. */
+.rdp-root.rdp-root {
   --rdp-accent-color: var(--terracotta);
   --rdp-accent-background-color: var(--terracotta-soft);
   --rdp-day_button-border-radius: 6px;
