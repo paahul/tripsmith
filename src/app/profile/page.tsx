@@ -63,6 +63,11 @@ export default function ProfilePage() {
   }, []);
 
   const stats = useMemo(() => (profile ? completion(profile) : { filled: 0, total: 10 }), [profile]);
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  function toggle(id: string) {
+    setOpenSection((cur) => (cur === id ? null : id));
+  }
 
   if (!profile) return null;
 
@@ -125,11 +130,14 @@ export default function ProfilePage() {
           Saved locally — nothing leaves your browser until you ask for a plan.
         </p>
 
-        <form id="profile-form" onSubmit={handleSave} className="space-y-6">
+        <form id="profile-form" onSubmit={handleSave} className="space-y-14">
           <Section
+            number="01"
             title="Basics"
             filled={sectionFilledCount([profile.homeAirport])}
             total={1}
+            open={openSection === "basics"}
+            onToggle={() => toggle("basics")}
           >
             <Field label="Name (optional)">
               <Input value={profile.name ?? ""} onChange={(v) => update("name", v)} />
@@ -144,6 +152,7 @@ export default function ProfilePage() {
           </Section>
 
           <Section
+            number="02"
             title="Where you stay"
             filled={sectionFilledCount([
               profile.stays.style,
@@ -151,6 +160,8 @@ export default function ProfilePage() {
               profile.stays.regionalAdjustments,
             ])}
             total={3}
+            open={openSection === "stays"}
+            onToggle={() => toggle("stays")}
           >
             <Field label="Style">
               <Textarea
@@ -210,9 +221,12 @@ export default function ProfilePage() {
           </Section>
 
           <Section
+            number="03"
             title="Where you eat"
             filled={sectionFilledCount([profile.food.style, profile.food.dietary, profile.food.avoid])}
             total={3}
+            open={openSection === "food"}
+            onToggle={() => toggle("food")}
           >
             <Field label="Style">
               <Textarea
@@ -238,9 +252,12 @@ export default function ProfilePage() {
           </Section>
 
           <Section
+            number="04"
             title="How you travel"
             filled={sectionFilledCount([profile.soloMode, profile.familyMode])}
             total={2}
+            open={openSection === "travel"}
+            onToggle={() => toggle("travel")}
           >
             <Field label="Pace">
               <PaceCards
@@ -277,9 +294,12 @@ export default function ProfilePage() {
           </Section>
 
           <Section
+            number="05"
             title="Anything else"
             filled={sectionFilledCount([profile.freeform])}
             total={1}
+            open={openSection === "else"}
+            onToggle={() => toggle("else")}
           >
             <Field label="Free-text — anything tripsmith should know">
               <Textarea
@@ -349,39 +369,50 @@ function TopoBand() {
 }
 
 function Section({
+  number,
   title,
   filled,
   total,
+  open,
+  onToggle,
   children,
 }: {
+  number: string;
   title: string;
   filled: number;
   total: number;
+  open: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
   const complete = filled === total && total > 0;
   return (
-    <fieldset className="border-t border-line pt-5">
+    <fieldset>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-baseline justify-between text-left"
+        onClick={onToggle}
+        className="group flex w-full items-baseline justify-between gap-4 text-left"
       >
-        <legend className="font-serif text-2xl font-light text-ink">{title}</legend>
-        <div className="flex items-baseline gap-3">
-          <span className={`text-xs ${complete ? "text-moss" : "text-muted"}`}>
+        <div className="flex items-baseline gap-5">
+          <span className="font-mono text-xs uppercase tracking-[0.22em] text-terracotta">
+            {number}
+          </span>
+          <legend className="font-serif text-3xl font-light text-ink">{title}</legend>
+        </div>
+        <div className="flex items-baseline gap-4">
+          <span className={`font-mono text-xs ${complete ? "text-moss" : "text-muted"}`}>
             {filled}/{total}
           </span>
           <span
-            className="font-mono text-xs text-muted"
+            className="font-mono text-lg text-muted group-hover:text-terracotta"
             aria-hidden="true"
           >
             {open ? "−" : "+"}
           </span>
         </div>
       </button>
-      {open && <div className="mt-5 space-y-5">{children}</div>}
+      <hr className="mt-3 border-line-strong" />
+      {open && <div className="mt-7 space-y-5">{children}</div>}
     </fieldset>
   );
 }
