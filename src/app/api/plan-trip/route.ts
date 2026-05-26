@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getWeather } from "@/lib/openweather";
 import { generateTripPlan } from "@/lib/claude";
+import { getHeroImage } from "@/lib/unsplash";
 import { MAX_TRIP_DAYS, tripLengthDays, type Profile, type TripRequest } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -37,7 +38,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const weather = await getWeather(trip.destination).catch(() => null);
+    const [weather, heroImage] = await Promise.all([
+      getWeather(trip.destination).catch(() => null),
+      getHeroImage(trip.destination).catch(() => null),
+    ]);
 
     const plan = await generateTripPlan({
       profile,
@@ -45,7 +49,7 @@ export async function POST(req: Request) {
       weather,
     });
 
-    return NextResponse.json(plan);
+    return NextResponse.json({ ...plan, heroImage });
   } catch (err) {
     console.error("plan-trip error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";

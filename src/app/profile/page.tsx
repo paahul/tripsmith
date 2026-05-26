@@ -41,28 +41,30 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="flex flex-1 justify-center bg-zinc-50 px-6 py-12 dark:bg-black">
+    <main className="flex flex-1 justify-center px-6 py-12">
       <div className="w-full max-w-2xl">
         <div className="mb-8 flex items-baseline justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-            Your travel profile
-          </h1>
-          <Link href="/" className="text-sm text-zinc-500 underline-offset-4 hover:underline">
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-[0.22em] text-terracotta">
+              Your travel profile
+            </p>
+            <h1 className="font-serif text-4xl font-light text-ink">How do you travel?</h1>
+          </div>
+          <Link href="/" className="text-sm text-muted hover:text-terracotta">
             ← home
           </Link>
         </div>
 
-        <p className="mb-10 text-zinc-600 dark:text-zinc-400">
-          Tell tripsmith how you like to travel. Saved locally — nothing leaves your browser
-          until you ask for a plan.
+        <p className="mb-12 font-serif text-lg font-light italic text-ink-2">
+          Saved locally — nothing leaves your browser until you ask for a plan.
         </p>
 
-        <form onSubmit={handleSave} className="space-y-10">
+        <form onSubmit={handleSave} className="space-y-12">
           <Section title="Basics">
             <Field label="Name (optional)">
               <Input value={profile.name ?? ""} onChange={(v) => update("name", v)} />
             </Field>
-            <Field label="Home airport (IATA code, e.g. SFO, JFK, LHR)">
+            <Field label="Home airport (IATA code)">
               <Input
                 value={profile.homeAirport}
                 onChange={(v) => update("homeAirport", v.toUpperCase().slice(0, 3))}
@@ -72,23 +74,23 @@ export default function ProfilePage() {
           </Section>
 
           <Section title="Where you stay">
-            <Field label="Style (e.g. boutique hotels, design-forward, Airbnb in walkable areas)">
+            <Field label="Style">
               <Textarea
                 value={profile.stays.style}
                 onChange={(v) => updateNested("stays", "style", v)}
+                placeholder="boutique hotels, design-forward, Airbnb in walkable areas"
               />
             </Field>
-            <Field label="Avoid (e.g. big chains, all-inclusives, anything noisy)">
+            <Field label="Avoid">
               <Textarea
                 value={profile.stays.avoid}
                 onChange={(v) => updateNested("stays", "avoid", v)}
+                placeholder="big chains, all-inclusives, anything noisy"
               />
             </Field>
 
             <div>
-              <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Tier — solo trips
-              </span>
+              <span className="mb-3 block text-sm font-medium text-ink-2">Tier — solo trips</span>
               <TierPicker
                 value={profile.stays.tierSolo}
                 onChange={(v) => updateNested("stays", "tierSolo", v)}
@@ -97,7 +99,7 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <span className="mb-3 block text-sm font-medium text-ink-2">
                 Tier — family / group trips
               </span>
               <TierPicker
@@ -107,35 +109,36 @@ export default function ProfilePage() {
               />
             </div>
 
-            <Field label="Regional adjustments (optional — when does this change?)">
+            <Field label="Regional adjustments (optional)">
               <Textarea
                 value={profile.stays.regionalAdjustments}
                 onChange={(v) => updateNested("stays", "regionalAdjustments", v)}
-                placeholder="e.g. In SE Asia I'd downshift to Standard — dollars stretch further. In Europe I prefer apartments over hotels."
+                placeholder="In SE Asia I'd downshift — dollars stretch further. In Europe I prefer apartments over hotels."
                 rows={3}
               />
             </Field>
           </Section>
 
           <Section title="Where you eat">
-            <Field label="Style (e.g. hole-in-the-wall, local favorites, 1–2 standout meals)">
+            <Field label="Style">
               <Textarea
                 value={profile.food.style}
                 onChange={(v) => updateNested("food", "style", v)}
+                placeholder="hole-in-the-wall, local favorites, 1–2 standout meals"
               />
             </Field>
             <Field label="Dietary restrictions">
               <Input
                 value={profile.food.dietary}
                 onChange={(v) => updateNested("food", "dietary", v)}
-                placeholder="e.g. pescatarian, no shellfish"
+                placeholder="pescatarian, no shellfish"
               />
             </Field>
             <Field label="Avoid">
               <Input
                 value={profile.food.avoid}
                 onChange={(v) => updateNested("food", "avoid", v)}
-                placeholder="e.g. tourist trap fine dining"
+                placeholder="tourist trap fine dining"
               />
             </Field>
           </Section>
@@ -145,7 +148,7 @@ export default function ProfilePage() {
               <select
                 value={profile.pace}
                 onChange={(e) => update("pace", e.target.value as Profile["pace"])}
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded border border-line bg-paper px-3 py-2 text-base focus:border-terracotta focus:outline-none"
               >
                 <option value="packed">Packed — see everything</option>
                 <option value="balanced">Balanced — a few things per day</option>
@@ -156,14 +159,14 @@ export default function ProfilePage() {
               <Textarea
                 value={profile.soloMode}
                 onChange={(v) => update("soloMode", v)}
-                placeholder="e.g. higher-end stays, more cafe-hopping, fewer big tours"
+                placeholder="higher-end stays, more cafe-hopping, fewer big tours"
               />
             </Field>
             <Field label="Family mode — how this changes with family">
               <Textarea
                 value={profile.familyMode}
                 onChange={(v) => update("familyMode", v)}
-                placeholder="e.g. apartments not hotels, kid-friendly activities, earlier dinners"
+                placeholder="apartments not hotels, kid-friendly activities, earlier dinners"
               />
             </Field>
           </Section>
@@ -178,21 +181,21 @@ export default function ProfilePage() {
             </Field>
           </Section>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <button
               type="submit"
-              className="rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+              className="rounded bg-terracotta px-6 py-2.5 text-sm font-medium text-cream hover:bg-terracotta-deep"
             >
               Save profile
             </button>
             <button
               type="button"
               onClick={() => router.push("/plan")}
-              className="text-sm font-medium text-zinc-700 underline-offset-4 hover:underline dark:text-zinc-300"
+              className="text-sm font-medium text-ink underline-offset-4 hover:underline"
             >
               Plan a trip →
             </button>
-            {saved && <span className="text-sm text-emerald-600">Saved.</span>}
+            {saved && <span className="text-sm italic text-moss">Saved.</span>}
           </div>
         </form>
       </div>
@@ -203,9 +206,7 @@ export default function ProfilePage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="space-y-5">
-      <legend className="mb-1 text-sm font-semibold uppercase tracking-wider text-zinc-500">
-        {title}
-      </legend>
+      <legend className="mb-3 font-serif text-2xl font-light text-ink">{title}</legend>
       {children}
     </fieldset>
   );
@@ -214,9 +215,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {label}
-      </span>
+      <span className="mb-1.5 block text-sm font-medium text-ink-2">{label}</span>
       {children}
     </label>
   );
@@ -233,7 +232,7 @@ function Input(props: {
       value={props.value}
       onChange={(e) => props.onChange(e.target.value)}
       placeholder={props.placeholder}
-      className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-600"
+      className="w-full rounded border border-line bg-paper px-3 py-2 text-base placeholder:text-muted/60 focus:border-terracotta focus:outline-none"
     />
   );
 }
@@ -250,7 +249,7 @@ function Textarea(props: {
       onChange={(e) => props.onChange(e.target.value)}
       placeholder={props.placeholder}
       rows={props.rows ?? 3}
-      className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-600"
+      className="w-full rounded border border-line bg-paper px-3 py-2 text-base placeholder:text-muted/60 focus:border-terracotta focus:outline-none"
     />
   );
 }
@@ -271,10 +270,10 @@ function TierPicker({
         return (
           <label
             key={t.id}
-            className={`block cursor-pointer rounded-md border p-3 transition ${
+            className={`block cursor-pointer rounded border-2 p-4 transition ${
               selected
-                ? "border-black bg-zinc-50 dark:border-zinc-200 dark:bg-zinc-900"
-                : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-600"
+                ? "border-terracotta bg-terracotta-soft/40"
+                : "border-line bg-paper hover:border-line-strong"
             }`}
           >
             <div className="flex items-start gap-3">
@@ -283,18 +282,18 @@ function TierPicker({
                 name={name}
                 checked={selected}
                 onChange={() => onChange(t.id)}
-                className="mt-1"
+                className="mt-1.5 accent-terracotta"
               />
               <div className="flex-1">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium">{t.label}</span>
-                  <span className="text-xs italic text-zinc-500">{t.tagline}</span>
+                <div className="flex items-baseline gap-3">
+                  <span className="font-serif text-xl">{t.label}</span>
+                  <span className="font-serif text-sm italic text-muted">{t.tagline}</span>
                 </div>
-                <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">{t.description}</p>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1.5 text-sm text-ink-2">{t.description}</p>
+                <p className="mt-1.5 text-xs text-muted">
                   <span className="font-medium">Examples:</span> {t.examples}
                 </p>
-                <p className="mt-1 font-mono text-xs text-zinc-500">{t.prices}</p>
+                <p className="mt-1 font-mono text-xs text-muted">{t.prices}</p>
               </div>
             </div>
           </label>

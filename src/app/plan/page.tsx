@@ -1,10 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DayPicker, type DateRange } from "react-day-picker";
+import "react-day-picker/style.css";
 import { hasProfile, loadProfile } from "@/lib/profile";
 import { MAX_TRIP_DAYS, tripLengthDays, type TripRequest } from "@/lib/types";
+
+const LOADING_MESSAGES = [
+  "Looking up flights…",
+  "Picking restaurants you'd like…",
+  "Choosing stays that match your tier…",
+  "Checking the weather forecast…",
+  "Building your day-by-day…",
+  "Pulling a hero shot…",
+  "Estimating the budget…",
+];
+
+function isoDate(d: Date | undefined): string {
+  if (!d) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export default function PlanPage() {
   const router = useRouter();
@@ -16,19 +36,45 @@ export default function PlanPage() {
     mode: "solo",
     notes: "",
   });
+  const [range, setRange] = useState<DateRange | undefined>();
   const [profileReady, setProfileReady] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingIndex, setLoadingIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    setProfileReady(hasProfile());
+  }, []);
+
+  useEffect(() => {
+    setRequest((r) => ({
+      ...r,
+      startDate: isoDate(range?.from),
+      endDate: isoDate(range?.to),
+    }));
+  }, [range]);
+
+  useEffect(() => {
+    if (loading) {
+      setLoadingIndex(0);
+      loadingTimerRef.current = setInterval(() => {
+        setLoadingIndex((i) => (i + 1) % LOADING_MESSAGES.length);
+      }, 4500);
+    } else if (loadingTimerRef.current) {
+      clearInterval(loadingTimerRef.current);
+      loadingTimerRef.current = null;
+    }
+    return () => {
+      if (loadingTimerRef.current) clearInterval(loadingTimerRef.current);
+    };
+  }, [loading]);
 
   const days = tripLengthDays(request.startDate, request.endDate);
   const tooLong = days > MAX_TRIP_DAYS;
   const datesInvalid =
     !!request.startDate && !!request.endDate && new Date(request.endDate) < new Date(request.startDate);
-  const submitDisabled = loading || tooLong || datesInvalid;
-
-  useEffect(() => {
-    setProfileReady(hasProfile());
-  }, []);
+  const submitDisabled = loading || tooLong || datesInvalid || !request.startDate || !request.endDate;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,7 +88,7 @@ export default function PlanPage() {
       return;
     }
     if (tooLong) {
-      setError(`Maximum ${MAX_TRIP_DAYS} days per plan. Pick a shorter range, or plan multi-leg trips separately.`);
+      setError(`Maximum ${MAX_TRIP_DAYS} days per plan.`);
       return;
     }
     setLoading(true);
@@ -59,6 +105,7 @@ export default function PlanPage() {
       }
       const data = await res.json();
       sessionStorage.setItem("tripsmith:lastTrip", JSON.stringify(data));
+      sessionStorage.removeItem("tripsmith:previousTrip");
       router.push("/trip");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -66,29 +113,52 @@ export default function PlanPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <main className="flex flex-1 items-center justify-center px-6 py-24">
+        <div className="text-center">
+          <div className="mb-6 inline-flex items-center gap-2">
+            <span className="block h-2 w-2 animate-pulse rounded-full bg-terracotta" />
+            <span className="block h-2 w-2 animate-pulse rounded-full bg-terracotta [animation-delay:200ms]" />
+            <span className="block h-2 w-2 animate-pulse rounded-full bg-terracotta [animation-delay:400ms]" />
+          </div>
+          <p className="font-serif text-3xl font-light italic text-ink">
+            {LOADING_MESSAGES[loadingIndex]}
+          </p>
+          <p className="mt-3 text-sm text-muted">
+            This usually takes about 25–35 seconds.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="flex flex-1 justify-center bg-zinc-50 px-6 py-12 dark:bg-black">
+    <main className="flex flex-1 justify-center px-6 py-12">
       <div className="w-full max-w-xl">
         <div className="mb-8 flex items-baseline justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-            Plan a trip
-          </h1>
-          <Link href="/" className="text-sm text-zinc-500 underline-offset-4 hover:underline">
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-[0.22em] text-terracotta">
+              Plan a trip
+            </p>
+            <h1 className="font-serif text-4xl font-light text-ink">Where to?</h1>
+          </div>
+          <Link href="/" className="text-sm text-muted hover:text-terracotta">
             ← home
           </Link>
         </div>
 
         {profileReady === false && (
-          <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          <div className="mb-6 rounded border border-terracotta/40 bg-terracotta-soft/60 p-4 text-sm text-terracotta-deep">
             You haven&apos;t set up your travel profile yet.{" "}
             <Link href="/profile" className="font-medium underline">
               Do that first
             </Link>{" "}
-            so the plan matches how you actually travel.
+            so the plan matches how you travel.
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <Field label="Destination (city or country)">
             <input
               type="text"
@@ -96,44 +166,35 @@ export default function PlanPage() {
               value={request.destination}
               onChange={(e) => setRequest({ ...request, destination: e.target.value })}
               placeholder="Lisbon, Portugal"
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="w-full rounded border border-line bg-paper px-3 py-2 text-base focus:border-terracotta focus:outline-none"
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Start date">
-              <input
-                type="date"
-                required
-                value={request.startDate}
-                onChange={(e) => setRequest({ ...request, startDate: e.target.value })}
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          <div>
+            <span className="mb-2 block text-sm font-medium text-ink-2">When?</span>
+            <div className="rounded border border-line bg-paper p-3">
+              <DayPicker
+                mode="range"
+                numberOfMonths={1}
+                selected={range}
+                onSelect={setRange}
+                disabled={{ before: new Date() }}
               />
-            </Field>
-            <Field label="End date">
-              <input
-                type="date"
-                required
-                value={request.endDate}
-                onChange={(e) => setRequest({ ...request, endDate: e.target.value })}
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              />
-            </Field>
+            </div>
+            {days > 0 && (
+              <p
+                className={`mt-2 text-sm ${
+                  tooLong || datesInvalid ? "text-terracotta-deep" : "text-muted"
+                }`}
+              >
+                {datesInvalid
+                  ? "End date must be on or after the start date."
+                  : tooLong
+                    ? `${days} days — maximum ${MAX_TRIP_DAYS} per plan.`
+                    : `${days} day${days === 1 ? "" : "s"}`}
+              </p>
+            )}
           </div>
-
-          {days > 0 && (
-            <p
-              className={`text-sm ${
-                tooLong || datesInvalid ? "text-amber-700 dark:text-amber-400" : "text-zinc-500"
-              }`}
-            >
-              {datesInvalid
-                ? "End date must be on or after the start date."
-                : tooLong
-                  ? `${days} days — maximum ${MAX_TRIP_DAYS} per plan. Pick a shorter range, or plan multi-leg trips separately.`
-                  : `${days} day${days === 1 ? "" : "s"}`}
-            </p>
-          )}
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Who's coming">
@@ -142,7 +203,7 @@ export default function PlanPage() {
                 onChange={(e) =>
                   setRequest({ ...request, mode: e.target.value as TripRequest["mode"] })
                 }
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded border border-line bg-paper px-3 py-2 text-base focus:border-terracotta focus:outline-none"
               >
                 <option value="solo">Solo</option>
                 <option value="couple">Couple</option>
@@ -167,23 +228,23 @@ export default function PlanPage() {
                     setRequest({ ...request, travelers: Math.min(10, Math.max(0, n)) });
                   }
                 }}
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded border border-line bg-paper px-3 py-2 text-base focus:border-terracotta focus:outline-none"
               />
             </Field>
           </div>
 
-          <Field label="Notes (optional — anything specific for this trip)">
+          <Field label="Notes (optional)">
             <textarea
               value={request.notes}
               onChange={(e) => setRequest({ ...request, notes: e.target.value })}
               rows={3}
               placeholder="e.g. anniversary trip, want one nice meal; kid has nut allergy; need to be back by Friday evening"
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="w-full rounded border border-line bg-paper px-3 py-2 text-base focus:border-terracotta focus:outline-none"
             />
           </Field>
 
           {error && (
-            <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+            <div className="rounded border border-terracotta/40 bg-terracotta-soft/60 p-3 text-sm text-terracotta-deep">
               {error}
             </div>
           )}
@@ -191,9 +252,9 @@ export default function PlanPage() {
           <button
             type="submit"
             disabled={submitDisabled}
-            className="rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className="rounded bg-terracotta px-6 py-3 text-base font-medium text-cream hover:bg-terracotta-deep disabled:opacity-40"
           >
-            {loading ? "Planning… (this takes 20–40s)" : "Plan my trip"}
+            Plan my trip
           </button>
         </form>
       </div>
@@ -204,9 +265,7 @@ export default function PlanPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {label}
-      </span>
+      <span className="mb-1.5 block text-sm font-medium text-ink-2">{label}</span>
       {children}
     </label>
   );

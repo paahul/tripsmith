@@ -115,6 +115,13 @@ export type BudgetSummary = {
   notes?: string;
 };
 
+export type HeroImage = {
+  url: string;
+  authorName: string;
+  authorUrl: string;
+  photoUrl: string;
+};
+
 export type TripPlan = {
   destination: string;
   summary: string;
@@ -125,6 +132,7 @@ export type TripPlan = {
   itinerary: ItineraryDay[];
   packingList: { category: string; items: string[] }[];
   weatherSummary: string;
+  heroImage?: HeroImage | null;
 };
 
 export const DEFAULT_PROFILE: Profile = {
