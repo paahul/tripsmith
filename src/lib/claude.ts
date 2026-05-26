@@ -59,7 +59,7 @@ Generate the TripPlan JSON now.`;
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 3500,
+    max_tokens: 4500,
     system: [
       {
         type: "text",
