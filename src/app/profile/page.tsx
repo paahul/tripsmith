@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadProfile, saveProfile } from "@/lib/profile";
 import { STAYS_TIERS, type Profile, type StaysTier } from "@/lib/types";
+import { TRAVEL_PHOTOS } from "@/lib/travelImages";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function ProfilePage() {
     if (!profile) return;
     saveProfile(profile);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => router.push("/plan"), 600);
   }
 
   return (
@@ -55,9 +56,22 @@ export default function ProfilePage() {
           </Link>
         </div>
 
-        <p className="mb-12 font-serif text-lg font-light italic text-ink-2">
+        <p className="mb-8 font-serif text-lg font-light italic text-ink-2">
           Saved locally — nothing leaves your browser until you ask for a plan.
         </p>
+
+        <div className="mb-12 grid grid-cols-5 gap-2">
+          {TRAVEL_PHOTOS.slice(0, 5).map((p) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={p.id}
+              src={p.url}
+              alt={p.alt}
+              loading="lazy"
+              className="aspect-[3/4] w-full rounded object-cover"
+            />
+          ))}
+        </div>
 
         <form onSubmit={handleSave} className="space-y-12">
           <Section title="Basics">

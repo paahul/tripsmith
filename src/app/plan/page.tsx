@@ -7,6 +7,7 @@ import { DayPicker, type DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { hasProfile, loadProfile } from "@/lib/profile";
 import { MAX_TRIP_DAYS, tripLengthDays, type TripRequest } from "@/lib/types";
+import { COVER_PHOTO_URL } from "@/lib/travelImages";
 
 const LOADING_MESSAGES = [
   "Looking up flights…",
@@ -134,8 +135,17 @@ export default function PlanPage() {
   }
 
   return (
-    <main className="flex flex-1 justify-center px-6 py-12">
-      <div className="w-full max-w-xl">
+    <main className="relative flex flex-1 justify-center px-6 py-12">
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center opacity-30"
+        style={{ backgroundImage: `url('${COVER_PHOTO_URL}')` }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-cream via-cream/70 to-cream"
+        aria-hidden="true"
+      />
+      <div className="w-full max-w-xl rounded-md border border-line bg-paper/95 p-8 shadow-sm backdrop-blur-sm">
         <div className="mb-8 flex items-baseline justify-between">
           <div>
             <p className="mb-2 text-xs uppercase tracking-[0.22em] text-terracotta">
