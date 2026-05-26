@@ -7,11 +7,9 @@ import type { TripPlan } from "@/lib/types";
 export default function TripPage() {
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [missing, setMissing] = useState(false);
-  const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
-  const [sendStatus, setSendStatus] = useState<
-    { kind: "ok"; message: string } | { kind: "err"; message: string } | null
-  >(null);
+  const [sent, setSent] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("tripsmith:lastTrip");
@@ -26,26 +24,21 @@ export default function TripPage() {
     }
   }, []);
 
-  async function handleEmail(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleEmail() {
     if (!plan) return;
     setSending(true);
-    setSendStatus(null);
+    setSendError(null);
     try {
       const res = await fetch("/api/email-trip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: email, plan }),
+        body: JSON.stringify({ plan }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
-      setSendStatus({ kind: "ok", message: `Sent to ${email}` });
-      setEmail("");
+      setSent(data.sentTo || "Paahul");
     } catch (err) {
-      setSendStatus({
-        kind: "err",
-        message: err instanceof Error ? err.message : "Failed to send",
-      });
+      setSendError(err instanceof Error ? err.message : "Failed to send");
     } finally {
       setSending(false);
     }
@@ -91,39 +84,31 @@ export default function TripPage() {
 
         <p className="mb-8 text-lg text-zinc-700 dark:text-zinc-300">{plan.summary}</p>
 
-        <form
-          onSubmit={handleEmail}
-          className="mb-10 flex flex-col gap-2 rounded-md border border-zinc-200 bg-white p-4 sm:flex-row sm:items-center dark:border-zinc-800 dark:bg-zinc-900"
-        >
-          <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:mr-1">
-            Email this plan to
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="flex-1 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-          />
-          <button
-            type="submit"
-            disabled={sending}
-            className="rounded-md bg-black px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-          >
-            {sending ? "Sending…" : "Send"}
-          </button>
-          {sendStatus && (
-            <span
-              className={`text-sm ${
-                sendStatus.kind === "ok" ? "text-emerald-600" : "text-red-600"
-              }`}
-            >
-              {sendStatus.message}
-            </span>
+        <div className="mb-10 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          {sent ? (
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+              ✓ Sent to <span className="font-mono">{sent}</span>. Please contact Paahul to get
+              it forwarded to your mailbox.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                Want this plan in your inbox?
+              </p>
+              <button
+                type="button"
+                onClick={handleEmail}
+                disabled={sending}
+                className="rounded-md bg-black px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+              >
+                {sending ? "Sending…" : "Email this plan"}
+              </button>
+            </div>
           )}
-        </form>
+          {sendError && (
+            <p className="mt-2 text-sm text-red-600">{sendError}</p>
+          )}
+        </div>
 
         <Block title="✈️ Flights" subtitle="Click through to book — tripsmith does not book for you.">
           <div className="space-y-3">
