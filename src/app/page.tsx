@@ -1,8 +1,19 @@
 import Link from "next/link";
-import { TRAVEL_PHOTOS } from "@/lib/travelImages";
+import { getHeroImage } from "@/lib/unsplash";
 
-export default function Home() {
-  const collage = TRAVEL_PHOTOS.slice(0, 4);
+export const revalidate = 2592000; // 30 days
+
+const COLLAGE_QUERIES = [
+  "mountain landscape travel",
+  "european old town street",
+  "tropical coastline ocean",
+  "tokyo street night",
+];
+
+export default async function Home() {
+  const photos = await Promise.all(
+    COLLAGE_QUERIES.map((q) => getHeroImage(q).catch(() => null)),
+  );
 
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-16">
@@ -62,18 +73,29 @@ export default function Home() {
         </div>
 
         <div className="hidden gap-3 lg:grid lg:grid-cols-2">
-          {collage.map((p, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={p.id}
-              src={p.url}
-              alt={p.alt}
-              loading="lazy"
-              className={`h-full w-full rounded object-cover shadow-sm ${
-                i === 0 ? "aspect-[4/5]" : i === 1 ? "aspect-[4/3]" : i === 2 ? "aspect-[4/3]" : "aspect-[4/5]"
-              }`}
-            />
-          ))}
+          {photos.map((photo, i) => {
+            const aspect =
+              i === 0 ? "aspect-[4/5]" : i === 1 ? "aspect-[4/3]" : i === 2 ? "aspect-[4/3]" : "aspect-[4/5]";
+            if (!photo) {
+              return (
+                <div
+                  key={i}
+                  className={`${aspect} rounded bg-gradient-to-br from-cream-2 via-terracotta-soft/40 to-cream-2`}
+                  aria-hidden="true"
+                />
+              );
+            }
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={photo.url}
+                alt={photo.authorName ? `Travel photo by ${photo.authorName}` : "Travel scene"}
+                loading="lazy"
+                className={`h-full w-full rounded object-cover shadow-sm ${aspect}`}
+              />
+            );
+          })}
         </div>
       </div>
     </main>

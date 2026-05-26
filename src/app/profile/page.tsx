@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadProfile, saveProfile } from "@/lib/profile";
 import { STAYS_TIERS, type Profile, type StaysTier } from "@/lib/types";
-import { TRAVEL_PHOTOS } from "@/lib/travelImages";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -56,22 +55,24 @@ export default function ProfilePage() {
           </Link>
         </div>
 
-        <p className="mb-8 font-serif text-lg font-light italic text-ink-2">
+        <figure className="mb-10 border-l-2 border-terracotta py-1 pl-5">
+          <blockquote className="font-serif text-2xl font-light italic leading-snug text-ink-2">
+            &ldquo;How you travel says more about you than where you&rsquo;ve been.&rdquo;
+          </blockquote>
+          <figcaption className="mt-2 text-xs uppercase tracking-[0.18em] text-muted">
+            — your profile, in one sitting
+          </figcaption>
+        </figure>
+
+        <div className="mb-10 flex items-center gap-4">
+          <hr className="flex-1 border-line" />
+          <span className="font-serif text-terracotta">✦</span>
+          <hr className="flex-1 border-line" />
+        </div>
+
+        <p className="mb-10 text-sm italic text-muted">
           Saved locally — nothing leaves your browser until you ask for a plan.
         </p>
-
-        <div className="mb-12 grid grid-cols-5 gap-2">
-          {TRAVEL_PHOTOS.slice(0, 5).map((p) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={p.id}
-              src={p.url}
-              alt={p.alt}
-              loading="lazy"
-              className="aspect-[3/4] w-full rounded object-cover"
-            />
-          ))}
-        </div>
 
         <form onSubmit={handleSave} className="space-y-12">
           <Section title="Basics">
