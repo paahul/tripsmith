@@ -1,19 +1,14 @@
 import Link from "next/link";
-import { getHeroImage } from "@/lib/unsplash";
+import { TRAVEL_PHOTOS } from "@/lib/travelImages";
 
-export const revalidate = 2592000; // 30 days
-
-const COLLAGE_QUERIES = [
-  "mountain landscape travel",
-  "european old town street",
-  "tropical coastline ocean",
-  "tokyo street night",
-];
-
-export default async function Home() {
-  const photos = await Promise.all(
-    COLLAGE_QUERIES.map((q) => getHeroImage(q).catch(() => null)),
-  );
+export default function Home() {
+  // Four-up collage from the curated set. Stable across renders.
+  const photos = [
+    TRAVEL_PHOTOS.find((p) => p.credit === "Dolomites"),
+    TRAVEL_PHOTOS.find((p) => p.credit === "Cinque Terre"),
+    TRAVEL_PHOTOS.find((p) => p.credit === "Tokyo"),
+    TRAVEL_PHOTOS.find((p) => p.credit === "Marrakech"),
+  ];
 
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-16">
@@ -90,7 +85,7 @@ export default async function Home() {
               <img
                 key={i}
                 src={photo.url}
-                alt={photo.authorName ? `Travel photo by ${photo.authorName}` : "Travel scene"}
+                alt={photo.alt}
                 loading="lazy"
                 className={`h-full w-full rounded object-cover shadow-sm ${aspect}`}
               />
