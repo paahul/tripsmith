@@ -7,6 +7,11 @@ import type { TripPlan } from "@/lib/types";
 export default function TripPage() {
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [missing, setMissing] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState<
+    { kind: "ok"; message: string } | { kind: "err"; message: string } | null
+  >(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("tripsmith:lastTrip");
@@ -20,6 +25,31 @@ export default function TripPage() {
       setMissing(true);
     }
   }, []);
+
+  async function handleEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!plan) return;
+    setSending(true);
+    setSendStatus(null);
+    try {
+      const res = await fetch("/api/email-trip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: email, plan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
+      setSendStatus({ kind: "ok", message: `Sent to ${email}` });
+      setEmail("");
+    } catch (err) {
+      setSendStatus({
+        kind: "err",
+        message: err instanceof Error ? err.message : "Failed to send",
+      });
+    } finally {
+      setSending(false);
+    }
+  }
 
   if (missing) {
     return (
@@ -59,7 +89,41 @@ export default function TripPage() {
           </div>
         </div>
 
-        <p className="mb-10 text-lg text-zinc-700 dark:text-zinc-300">{plan.summary}</p>
+        <p className="mb-8 text-lg text-zinc-700 dark:text-zinc-300">{plan.summary}</p>
+
+        <form
+          onSubmit={handleEmail}
+          className="mb-10 flex flex-col gap-2 rounded-md border border-zinc-200 bg-white p-4 sm:flex-row sm:items-center dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:mr-1">
+            Email this plan to
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="flex-1 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <button
+            type="submit"
+            disabled={sending}
+            className="rounded-md bg-black px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          >
+            {sending ? "Sending…" : "Send"}
+          </button>
+          {sendStatus && (
+            <span
+              className={`text-sm ${
+                sendStatus.kind === "ok" ? "text-emerald-600" : "text-red-600"
+              }`}
+            >
+              {sendStatus.message}
+            </span>
+          )}
+        </form>
 
         <Block title="✈️ Flights" subtitle="Click through to book — tripsmith does not book for you.">
           <div className="space-y-3">

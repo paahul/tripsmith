@@ -27,6 +27,10 @@ export default function PlanPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (request.travelers < 1) {
+      setError("Travelers must be at least 1.");
+      return;
+    }
     setLoading(true);
     try {
       const profile = loadProfile();
@@ -123,10 +127,18 @@ export default function PlanPage() {
                 type="number"
                 min={1}
                 max={10}
-                value={request.travelers}
-                onChange={(e) =>
-                  setRequest({ ...request, travelers: parseInt(e.target.value || "1") })
-                }
+                value={request.travelers === 0 ? "" : request.travelers}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") {
+                    setRequest({ ...request, travelers: 0 });
+                    return;
+                  }
+                  const n = parseInt(v);
+                  if (!isNaN(n)) {
+                    setRequest({ ...request, travelers: Math.min(10, Math.max(0, n)) });
+                  }
+                }}
                 className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
               />
             </Field>
