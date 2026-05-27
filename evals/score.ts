@@ -27,9 +27,12 @@ Score the plan on 5 dimensions, each from 1 (very poor) to 5 (excellent).
 
 **preference_alignment** — Does the output match what the user asked for?
 - Accommodation tier: does pricePerNight match the profile's tier for the trip mode (solo→tierSolo, family/couple/friends→tierFamily)?
+- Regional overrides: if profile.stays.regionalAdjustments specifies a different tier for this destination's region, that override takes priority over the global tier
 - Pace: "packed" profile should have 3 activities/day; "slow" should have 1-2; "balanced" is 2-3
 - Food: dietary restrictions must be respected in every meal suggestion
 - profile.stays.avoid and profile.food.avoid must not appear in output
+- Freeform notes: specific requests in profile.freeform (e.g. "I want live jazz", "skip the tourist stuff") should be reflected in the itinerary
+- Conflicting preferences: when profile.freeform contradicts the tier setting, note whether the plan made a reasonable judgment call
 
 **budget_coherence** — Are the numbers internally consistent?
 - accommodation total (pricePerNight × nights) should roughly match budgetSummary.accommodation string
@@ -120,11 +123,13 @@ Score on 2 dimensions from 1 (very poor) to 5 (excellent).
 
 **change_applied** — Was the requested change actually made?
 - The specific thing the user asked to change should be different in the refined plan
+- EXCEPTION: if the request is impossible (e.g. adding days beyond the fixed trip dates, booking real flights), the correct behavior is to return the plan UNCHANGED and put a note in budgetSummary.notes explaining why. Score this 5 if handled correctly, 1 if the model hallucinated a "fix".
 
 **unchanged_preserved** — Was everything else left intact?
 - Fields not mentioned in the tweak should be identical or very close to the original
 - Itinerary days not mentioned should be unchanged
 - Budget fields should only change if the tweak implied a price change
+- For vague instructions (e.g. "make it more fun"), reasonable changes to the relevant day are acceptable; wholesale rewrites of unrelated days are not
 
 Return ONLY valid JSON:
 {
