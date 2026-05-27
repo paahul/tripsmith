@@ -3,6 +3,8 @@ import type { Profile, TripRequest, TripPlan } from "@/lib/types";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const JUDGE_MODEL = "claude-sonnet-4-6";
+
 export type DimensionScore = {
   score: number; // 1-5
   reason: string;
@@ -78,7 +80,7 @@ ${JSON.stringify(plan, null, 2)}
 Score this plan now.`;
 
   const response = await client.messages.create({
-    model: "claude-haiku-4-5",
+    model: JUDGE_MODEL,
     max_tokens: 1024,
     system: JUDGE_PROMPT,
     messages: [{ role: "user", content: userMessage }],
@@ -147,7 +149,7 @@ ${JSON.stringify(refinedPlan, null, 2)}
 Score the refinement now.`;
 
   const response = await client.messages.create({
-    model: "claude-haiku-4-5",
+    model: JUDGE_MODEL,
     max_tokens: 512,
     system: REFINE_JUDGE_PROMPT,
     messages: [{ role: "user", content: userMessage }],
