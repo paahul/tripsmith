@@ -71,12 +71,32 @@ export default function OpengraphImage() {
         <div
           style={{
             display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
             fontSize: 22,
             color: "#8a7b66",
-            fontStyle: "italic",
           }}
         >
-          Profile-tuned itineraries, day-by-day, in under a minute.
+          <div
+            style={{
+              display: "flex",
+              fontStyle: "italic",
+            }}
+          >
+            Profile-tuned itineraries, day-by-day, in under a minute.
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontFamily:
+                "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace",
+              fontSize: 18,
+              color: "#a9a094",
+              letterSpacing: "0.04em",
+            }}
+          >
+            tripsmith.paahulhq.com
+          </div>
         </div>
       </div>
     ),

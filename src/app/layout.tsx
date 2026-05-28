@@ -18,7 +18,10 @@ const fraunces = Fraunces({
   axes: ["opsz", "SOFT"],
 });
 
+const SITE_URL = "https://tripsmith.paahulhq.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "tripsmith — a personal travel planner",
     template: "%s · tripsmith",
@@ -29,8 +32,10 @@ export const metadata: Metadata = {
     title: "tripsmith — a personal travel planner",
     description:
       "Tell it how you travel. Get a profile-tuned itinerary — flights, stays, day-by-day, packing — in under a minute.",
+    url: SITE_URL,
     siteName: "tripsmith",
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
