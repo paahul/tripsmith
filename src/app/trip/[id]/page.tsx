@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
+import { getSupabaseBrowser } from "@/lib/supabase/browser";
 import type { TripPlan } from "@/lib/types";
 
 type TripPlanWithId = TripPlan & { id?: string };
@@ -30,6 +31,9 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [emailPrompting, setEmailPrompting] = useState(false);
+  const [recipientInput, setRecipientInput] = useState("");
 
   const [tweak, setTweak] = useState("");
   const [refining, setRefining] = useState(false);
@@ -75,26 +79,64 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       .finally(() => setLoading(false));
   }, [id]);
 
-  async function handleEmail() {
+  // On mount, see if the visitor is signed in so we can default to their email.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadUser() {
+      try {
+        const { data } = await getSupabaseBrowser().auth.getUser();
+        if (!cancelled && data.user?.email) setUserEmail(data.user.email);
+      } catch {
+        // Not signed in or auth error — leave userEmail null, fall through to prompt UI.
+      }
+    }
+    void loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function handleEmailButtonClick() {
+    if (!plan) return;
+    setSendError(null);
+    if (userEmail) {
+      void sendToRecipient(userEmail);
+    } else {
+      setRecipientInput("");
+      setEmailPrompting(true);
+    }
+  }
+
+  async function sendToRecipient(to: string) {
     if (!plan) return;
     setSending(true);
     setSendError(null);
     try {
       const shareUrl =
-        typeof window !== "undefined" ? `${window.location.origin}/trip/${id}` : undefined;
+        typeof window !== "undefined"
+          ? `${window.location.origin}/trip/${id}`
+          : undefined;
       const res = await fetch("/api/email-trip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, shareUrl }),
+        body: JSON.stringify({ plan, shareUrl, to }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
-      setSent(data.sentTo || "Paahul");
+      setSent(data.sentTo || to);
+      setEmailPrompting(false);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Failed to send");
     } finally {
       setSending(false);
     }
+  }
+
+  function handleRecipientSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = recipientInput.trim();
+    if (!trimmed) return;
+    void sendToRecipient(trimmed);
   }
 
   const [copied, setCopied] = useState(false);
@@ -265,10 +307,41 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
                   <span className="text-ink-2">
                     ✓ Emailed to <span className="font-mono">{sent}</span>
                   </span>
+                ) : emailPrompting ? (
+                  <form
+                    onSubmit={handleRecipientSubmit}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <input
+                      type="email"
+                      value={recipientInput}
+                      onChange={(e) => setRecipientInput(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      autoFocus
+                      disabled={sending}
+                      className="w-48 rounded-sm border border-line bg-paper px-2 py-0.5 text-sm text-ink focus:border-terracotta focus:outline-none disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={sending || !recipientInput.trim()}
+                      className="text-ink hover:text-terracotta disabled:opacity-50"
+                    >
+                      {sending ? "Sending…" : "Send"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEmailPrompting(false)}
+                      disabled={sending}
+                      className="text-muted hover:text-terracotta disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </form>
                 ) : (
                   <button
                     type="button"
-                    onClick={handleEmail}
+                    onClick={handleEmailButtonClick}
                     disabled={sending}
                     className="text-ink hover:text-terracotta disabled:opacity-50"
                   >

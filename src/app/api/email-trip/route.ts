@@ -5,8 +5,11 @@ import type { TripPlan } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const FROM = process.env.EMAIL_FROM || "tripsmith <onboarding@resend.dev>";
-const OWNER_EMAIL = process.env.TRIPSMITH_OWNER_EMAIL || "sikandpaahul@gmail.com";
+const FROM = process.env.EMAIL_FROM || "Tripsmith <trips@paahulhq.com>";
+
+function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
 
 export async function POST(req: Request) {
   try {
@@ -18,11 +21,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const { plan, shareUrl } = (await req.json()) as { plan: TripPlan; shareUrl?: string };
+    const { plan, shareUrl, to } = (await req.json()) as {
+      plan: TripPlan;
+      shareUrl?: string;
+      to?: string;
+    };
 
     if (!plan?.destination) {
       return NextResponse.json({ error: "Missing trip plan." }, { status: 400 });
     }
+
+    if (!to || typeof to !== "string" || !isValidEmail(to.trim())) {
+      return NextResponse.json(
+        { error: "A valid recipient email is required." },
+        { status: 400 },
+      );
+    }
+    const recipient = to.trim();
 
     const resend = new Resend(apiKey);
     const planHtml = tripPlanToHtml(plan);
@@ -33,7 +48,7 @@ export async function POST(req: Request) {
 
     const { data, error } = await resend.emails.send({
       from: FROM,
-      to: OWNER_EMAIL,
+      to: recipient,
       subject,
       html,
     });
@@ -43,7 +58,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ id: data?.id, ok: true, sentTo: OWNER_EMAIL });
+    return NextResponse.json({ id: data?.id, ok: true, sentTo: recipient });
   } catch (err) {
     console.error("email-trip error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
