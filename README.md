@@ -4,7 +4,7 @@ A personal travel planner. Fill out a profile of *how* you travel — your stays
 
 It does **not** book anything. It hands you links you click to confirm.
 
-**Live demo:** *(your Vercel URL)*
+**Live demo:** *https://tripsmith-paahul.vercel.app/*
 
 ---
 
