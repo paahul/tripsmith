@@ -26,12 +26,15 @@ A handful of decisions worth calling out:
 
 **Optional auth.** Anonymous planning still works — magic-link sign-in is opt-in and gives you `/trips` history across devices.
 
+**Evals with a stronger judge model.** The plan-generation prompt is regression-tested with an LLM-as-judge harness in [`evals/`](evals/README.md). Production runs on Haiku 4.5; the judge that scores the output is **Sonnet 4.6** — deliberately a stronger model than the generator, so the eval can catch the subtle preference-misses and budget-math drift a same-or-weaker judge would rubber-stamp. 11 generation fixtures (5 dimensions: preference alignment, budget coherence, completeness, destination fit, format compliance) plus 4 refinement fixtures including an *impossible* request, which the model must refuse rather than hallucinate. The current baseline (Overall **4.4 / 5**) and the weak spot it surfaced (budget math reconciliation, **3.7**) are in [evals/README.md](evals/README.md).
+
 ---
 
 ## Stack
 
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4
 - **AI**: Anthropic Claude Haiku 4.5 (`@anthropic-ai/sdk` 0.98) — structured JSON output, prompt caching on the system prompt
+- **Evals**: tsx-driven LLM-as-judge harness ([`evals/`](evals/README.md)) — Sonnet 4.6 as the judge scoring Haiku output across 11 generation + 4 refinement fixtures
 - **DB + Auth**: Supabase Postgres + Supabase Auth (magic link, via `@supabase/ssr`)
 - **Email**: Resend (server-side, optional)
 - **Imagery**: Unsplash API (server-fetched, 30-day edge cache) + a curated CDN fallback for offline / no-key dev
@@ -90,6 +93,14 @@ Refinement (`/api/refine-trip`) feeds the existing plan back to Claude with the 
    npm run dev
    ```
 6. Open http://localhost:3000
+
+To run the eval suite against your local `.env.local`:
+
+```
+npm run eval
+```
+
+This runs all 15 fixtures (~13 min, real API cost) and writes a timestamped JSON to `evals/results/`. See [`evals/README.md`](evals/README.md) for the baseline scores and what they catch.
 
 ---
 
