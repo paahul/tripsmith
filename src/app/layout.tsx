@@ -55,7 +55,18 @@ function SiteFooter() {
   return (
     <footer className="border-t border-line bg-cream/60">
       <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-2 px-6 py-4 text-xs italic text-muted sm:flex-row sm:items-center">
-        <span>A side project by Paahul Sikand.</span>
+        <span>
+          A side project by{" "}
+          <a
+            href="https://paahulhq.com"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-line underline-offset-2 hover:text-terracotta"
+          >
+            Paahul Sikand
+          </a>
+          .
+        </span>
         <div className="flex items-center gap-4 not-italic">
           <a
             href="https://github.com/paahul/tripsmith"
